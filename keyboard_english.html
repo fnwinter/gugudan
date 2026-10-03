@@ -1,0 +1,671 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>영어 타자 연습</title>
+<style>
+  :root {
+    --bg: #fdf8ee;
+    --ink: #2b2b2b;
+    --accent: #3b82f6;
+    --ok: #16a34a;
+    --bad: #dc2626;
+    --box: #ffffff;
+    --muted: #6b7280;
+    /* 손가락별 키 색 */
+    --f1: #fde2e4;  /* 새끼 */
+    --f2: #fff1c1;  /* 약지 */
+    --f3: #d8f3dc;  /* 중지 */
+    --f4: #dbeafe;  /* 검지 */
+    --f5: #ede9fe;  /* 엄지 */
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; min-height: 100%; }
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: "Segoe UI", "Malgun Gothic", sans-serif;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-height: 100vh;
+    user-select: none;
+  }
+
+  button {
+    font-size: clamp(16px, 3vw, 22px);
+    font-weight: 700;
+    padding: 8px 18px;
+    border: none;
+    border-radius: 12px;
+    background: var(--accent);
+    color: #fff;
+    cursor: pointer;
+    font-family: inherit;
+  }
+  button:active { transform: scale(.97); }
+
+  /* 상단 */
+  .top {
+    width: 100%;
+    max-width: 1000px;
+    padding: 16px 16px 0;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+  }
+  .tabs {
+    display: flex;
+    background: #e5e7eb;
+    border-radius: 14px;
+    padding: 4px;
+  }
+  .tabs button { background: transparent; color: var(--ink); }
+  .tabs button.on { background: var(--box); color: var(--accent); box-shadow: 0 2px 4px rgba(0,0,0,.1); }
+  #rowSelect, #storySelect {
+    font-size: clamp(16px, 3vw, 20px);
+    font-family: inherit;
+    font-weight: 700;
+    padding: 8px 10px;
+    border: 3px solid #9ca3af;
+    border-radius: 12px;
+    background: var(--box);
+  }
+  .stats {
+    margin-left: auto;
+    display: flex;
+    gap: 16px;
+    font-size: clamp(16px, 3vw, 22px);
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* 연습 글 */
+  main {
+    flex: 1;
+    width: 100%;
+    max-width: 1000px;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 20px;
+  }
+  .lines {
+    background: var(--box);
+    border-radius: 20px;
+    box-shadow: 0 6px 0 rgba(0,0,0,.08);
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+  .line {
+    font-size: clamp(28px, 5.5vw, 48px);
+    font-weight: 700;
+    min-height: 1.4em;
+    white-space: pre-wrap;
+    word-break: break-all;
+    letter-spacing: .01em;
+  }
+  #target { color: var(--ink); }
+  #target .cur { background: #fef3c7; border-radius: 6px; }
+  #typed { color: var(--accent); border-top: 3px dashed #e5e7eb; padding-top: 14px; }
+  #typed .ok { color: var(--ok); }
+  #typed .bad { color: var(--bad); background: #fee2e2; border-radius: 6px; }
+  #typed .now { color: var(--accent); }
+  .caret {
+    display: inline-block;
+    width: 3px;
+    height: 1.1em;
+    background: var(--accent);
+    vertical-align: -0.15em;
+    animation: blink 1s steps(1) infinite;
+  }
+  @keyframes blink { 50% { opacity: 0; } }
+  #progress { font-size: clamp(16px, 3vw, 22px); font-weight: 700; color: var(--muted); }
+  #progress:empty { display: none; }
+  #target.finish { color: var(--ok); }
+  #nextText { font-size: clamp(18px, 3vw, 24px); color: var(--muted); }
+  .hint { font-size: clamp(14px, 2.5vw, 18px); color: var(--muted); text-align: center; }
+
+  /* 키보드 */
+  .keyboard {
+    width: 100%;
+    background: #d1d5db;
+    border-radius: 16px;
+    padding: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .krow { display: flex; gap: 6px; }
+  .key {
+    flex: 1 1 0;
+    min-width: 0;
+    height: clamp(40px, 7vw, 64px);
+    background: var(--box);
+    border-radius: 8px;
+    box-shadow: 0 3px 0 #9ca3af;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: clamp(15px, 3vw, 28px);
+    font-weight: 700;
+    cursor: pointer;
+    transition: transform .05s, box-shadow .05s;
+  }
+  .key.fn { font-size: clamp(10px, 1.6vw, 16px); color: var(--muted); background: #f3f4f6; }
+  .key .sh { position: absolute; top: 2px; left: 5px; font-size: .5em; color: var(--muted); }
+  .key .en { position: absolute; bottom: 2px; right: 5px; font-size: .4em; color: #9ca3af; font-weight: 400; }
+  .key.home::after {
+    content: "";
+    position: absolute;
+    bottom: 6px;
+    width: 30%;
+    height: 3px;
+    border-radius: 2px;
+    background: var(--muted);
+  }
+  .key.f1 { background: var(--f1); }
+  .key.f2 { background: var(--f2); }
+  .key.f3 { background: var(--f3); }
+  .key.f4 { background: var(--f4); }
+  .key.f5 { background: var(--f5); }
+  .key.guide { outline: 4px solid var(--accent); outline-offset: -2px; animation: pulse 1s infinite; }
+  .key.guide.err { outline-color: var(--bad); }
+  @keyframes pulse { 50% { outline-color: transparent; } }
+  .key.down {
+    transform: translateY(3px);
+    box-shadow: 0 0 0 #9ca3af;
+    background: var(--accent);
+    color: #fff;
+  }
+  .key.down .sh, .key.down .en { color: #e0e7ff; }
+  .key.sticky { background: #bfdbfe; }
+
+  .home-btn {
+    display: inline-block;
+    font-size: clamp(16px, 3vw, 22px);
+    font-weight: 700;
+    padding: 8px 16px;
+    border-radius: 12px;
+    background: #e5e7eb;
+    color: var(--ink);
+    text-decoration: none;
+    white-space: nowrap;
+  }
+  .home-btn:active { transform: scale(.97); }
+</style>
+</head>
+<body>
+  <div class="top">
+    <a class="home-btn" href="index.html">🏠 처음으로</a>
+    <div class="tabs">
+      <button data-mode="jari" class="on">자리</button>
+      <button data-mode="word">낱말</button>
+      <button data-mode="sentence">문장</button>
+      <button data-mode="story">긴 글</button>
+    </div>
+    <select id="rowSelect">
+      <option value="mid">가운데 줄</option>
+      <option value="top">윗줄</option>
+      <option value="bottom">아랫줄</option>
+      <option value="all">전체</option>
+    </select>
+    <select id="storySelect" style="display:none"></select>
+    <div class="stats">
+      <span>⚡ <span id="speed">0</span>타</span>
+      <span>🎯 <span id="accuracy">100</span>%</span>
+      <span>✅ <span id="lineCount">0</span>줄</span>
+    </div>
+  </div>
+
+  <main>
+    <div class="lines">
+      <div id="progress"></div>
+      <div class="line" id="target"></div>
+      <div class="line" id="typed"></div>
+      <div id="nextText"></div>
+    </div>
+    <div class="keyboard" id="keyboard"></div>
+    <div class="hint">한/영 전환 없이 그대로 치면 영어가 써져요 · 대문자는 Shift · 깜빡이는 키를 눌러 보세요 · 화면의 키를 눌러도 돼요</div>
+  </main>
+
+<script>
+  // ===== 영문 자판 =====
+  // [코드, 보통, Shift, 영문 표시, 너비, 손가락]
+  const ROWS = [
+    [['Backquote','`','~','',1,1],['Digit1','1','!','',1,1],['Digit2','2','@','',1,2],['Digit3','3','#','',1,3],
+     ['Digit4','4','$','',1,4],['Digit5','5','%','',1,4],['Digit6','6','^','',1,4],['Digit7','7','&','',1,4],
+     ['Digit8','8','*','',1,3],['Digit9','9','(','',1,2],['Digit0','0',')','',1,1],['Minus','-','_','',1,1],
+     ['Equal','=','+','',1,1],['Backspace','⌫ 지우기','','',2,0]],
+    [['Tab','Tab','','',1.5,0],['KeyQ','q','Q','',1,1],['KeyW','w','W','',1,2],['KeyE','e','E','',1,3],
+     ['KeyR','r','R','',1,4],['KeyT','t','T','',1,4],['KeyY','y','Y','',1,4],['KeyU','u','U','',1,4],
+     ['KeyI','i','I','',1,3],['KeyO','o','O','',1,2],['KeyP','p','P','',1,1],['BracketLeft','[','{','',1,1],
+     ['BracketRight',']','}','',1,1],['Backslash','\\','|','',1.5,1]],
+    [['CapsLock','Caps','','',1.8,0],['KeyA','a','A','',1,1],['KeyS','s','S','',1,2],['KeyD','d','D','',1,3],
+     ['KeyF','f','F','',1,4],['KeyG','g','G','',1,4],['KeyH','h','H','',1,4],['KeyJ','j','J','',1,4],
+     ['KeyK','k','K','',1,3],['KeyL','l','L','',1,2],['Semicolon',';',':','',1,1],['Quote',"'",'"','',1,1],
+     ['Enter','Enter','','',2.2,0]],
+    [['ShiftLeft','Shift','','',2.4,0],['KeyZ','z','Z','',1,1],['KeyX','x','X','',1,2],['KeyC','c','C','',1,3],
+     ['KeyV','v','V','',1,4],['KeyB','b','B','',1,4],['KeyN','n','N','',1,4],['KeyM','m','M','',1,4],
+     ['Comma',',','<','',1,3],['Period','.','>','',1,2],['Slash','/','?','',1,1],['ShiftRight','Shift','','',2.6,0]],
+    [['Space','띄어쓰기','','',8,5]],
+  ];
+  const TYPEABLE = {};   // 코드 → [보통 글자, Shift 글자]
+  const KEY_OF = {};     // 글자 → { code, shift }
+  ROWS.flat().forEach(([code, normal, shift, , , finger]) => {
+    if (finger === 0) return;
+    const n = code === 'Space' ? ' ' : normal;
+    const s = code === 'Space' ? ' ' : (shift || normal);
+    TYPEABLE[code] = [n, s];
+    if (!(n in KEY_OF)) KEY_OF[n] = { code, shift: false };
+    if (shift && !(shift in KEY_OF)) KEY_OF[shift] = { code, shift: true };
+  });
+
+  // 영어는 조합 없이 한 글자 = 한 키
+  const toKeys = text => [...text];
+  const compose = keys => keys;
+
+  // ===== 연습 글 =====
+  const JARI = {
+    mid: 'asdfghjkl',
+    top: 'qwertyuiop',
+    bottom: 'zxcvbnm',
+  };
+  JARI.all = JARI.mid + JARI.top + JARI.bottom;
+  const WORDS = `apple banana cat dog egg fish girl boy house ice juice king lion moon nose
+    orange pencil queen rabbit sun tree umbrella violin water box yellow zebra book school
+    friend mother father sister brother happy smile green blue red pink black white star
+    rain snow cloud flower bird horse tiger bear duck milk bread candy pizza cookie ball
+    bike train ship plane chair desk door window clock music dance jump run swim sleep`.split(/\s+/);
+  const SENTENCES = [
+    'I like to read books.',
+    'The sun is shining today.',
+    'My dog can run very fast.',
+    'We go to school by bus.',
+    'She has a red umbrella.',
+    'Thank you for your help.',
+    'Can you play the piano?',
+    'I am happy to see you!',
+    'The bird sings in the tree.',
+    "Let's play soccer after school.",
+    'What time is it now?',
+    'My favorite color is blue.',
+    'It is raining outside.',
+    'I brush my teeth every morning.',
+    'How are you today?',
+    'We love our family.',
+  ];
+  // 긴 글: 한 줄씩 차례대로 침
+  const STORIES = [
+    { group: '이솝 우화', title: 'The Tortoise and the Hare', text: `
+Once upon a time, a hare made fun of a slow tortoise.
+"You are so slow!" laughed the hare.
+"Let's have a race," said the tortoise.
+The hare ran very fast and soon was far ahead.
+"I have lots of time. I will take a nap."
+The hare fell asleep under a big tree.
+The tortoise kept walking, slowly and steadily.
+When the hare woke up, the tortoise was at the finish line.
+Slow and steady wins the race.` },
+    { group: '이솝 우화', title: 'The Ant and the Grasshopper', text: `
+In summer, the ant worked hard every day.
+He carried food to his home, one piece at a time.
+The grasshopper sang and played all day long.
+"Why work so hard? Come and play with me!"
+"I am saving food for the winter," said the ant.
+Soon winter came, and the fields were covered with snow.
+The hungry grasshopper knocked on the ant's door.
+The kind ant shared his food with the grasshopper.
+It is wise to prepare for the days ahead.` },
+    { group: '이솝 우화', title: 'The Boy Who Cried Wolf', text: `
+A young shepherd boy watched his sheep near a village.
+One day he was bored, so he shouted, "Wolf! Wolf!"
+The villagers ran up the hill to help him.
+There was no wolf, and the boy laughed at them.
+He played the same trick again the next day.
+Then one evening, a real wolf came out of the forest.
+"Wolf! Wolf! Please help me!" cried the boy.
+But nobody believed him, and nobody came.
+Nobody believes a liar, even when he tells the truth.` },
+    { group: '이솝 우화', title: 'The North Wind and the Sun', text: `
+The North Wind and the Sun argued about who was stronger.
+They saw a traveler walking along the road in a warm coat.
+"Whoever takes off his coat first is the winner."
+The North Wind blew as hard as he could.
+But the traveler held his coat even more tightly.
+Then the Sun shone warmly on the traveler.
+Soon the traveler felt hot and took off his coat.
+Kindness works better than force.` },
+    { group: '이솝 우화', title: 'The Lion and the Mouse', text: `
+A little mouse ran across a sleeping lion's nose.
+The lion woke up and caught the mouse in his paw.
+"Please let me go! Someday I will help you."
+The lion laughed, but he let the little mouse go.
+A few days later, the lion was caught in a hunter's net.
+He roared loudly, but he could not get free.
+The mouse heard him and ran to help.
+She chewed the ropes until the lion was free.
+Little friends may prove to be great friends.` },
+    { group: '명언 · 속담', title: '영어 명언', text: `
+Knowledge is power. - Francis Bacon
+I think, therefore I am. - Rene Descartes
+Well done is better than well said. - Benjamin Franklin
+Imagination is more important than knowledge. - Albert Einstein
+Life is like riding a bicycle. To keep your balance, you must keep moving. - Albert Einstein
+To be, or not to be, that is the question. - William Shakespeare
+Not all those who wander are lost. - J. R. R. Tolkien
+The only thing we have to fear is fear itself. - Franklin D. Roosevelt
+The journey of a thousand miles begins with a single step. - Lao Tzu
+You miss 100% of the shots you don't take. - Wayne Gretzky
+I have a dream. - Martin Luther King Jr.` },
+    { group: '명언 · 속담', title: '영어 속담', text: `
+Practice makes perfect.
+Where there is a will, there is a way.
+The early bird catches the worm.
+Actions speak louder than words.
+Better late than never.
+Don't judge a book by its cover.
+Every cloud has a silver lining.
+Rome was not built in a day.
+Two heads are better than one.
+No pain, no gain.
+Time is money.
+Honesty is the best policy.` },
+  ].map(st => ({ ...st, lines: st.text.trim().split('\n') }));
+
+  const pick = arr => arr[Math.floor(Math.random() * arr.length)];
+
+  let mode = 'jari';
+  let lastSentence = '';
+  function makeLine() {
+    if (mode === 'jari') {
+      const set = [...JARI[$('rowSelect').value]];
+      return Array.from({ length: 8 }, () => pick(set) + pick(set) + pick(set)).join(' ');
+    }
+    if (mode === 'word') {
+      return Array.from({ length: 5 }, () => pick(WORDS)).join(' ');
+    }
+    let s;
+    do { s = pick(SENTENCES); } while (s === lastSentence);
+    lastSentence = s;
+    return s;
+  }
+
+  // ===== 상태 =====
+  const $ = id => document.getElementById(id);
+  let target = '', nextLine = '', targetKeys = [], typed = [];
+  let lineStart = 0, lineDone = false;
+  let goodKeys = 0, totalKeys = 0, lines = 0;
+  let stickyShift = false;
+
+  let storyPos = 0, finished = false;
+  function newLine(fresh) {
+    finished = false;
+    $('target').classList.remove('finish');
+    if (mode === 'story') {
+      const st = STORIES[$('storySelect').value];
+      storyPos = fresh ? 0 : storyPos + 1;
+      if (storyPos >= st.lines.length) { showFinished(st); return; }
+      target = st.lines[storyPos];
+      nextLine = st.lines[storyPos + 1] || '(마지막 줄이에요)';
+      $('progress').textContent = `📖 ${st.title} · ${storyPos + 1} / ${st.lines.length}줄`;
+    } else {
+      target = fresh || !nextLine ? makeLine() : nextLine;
+      nextLine = makeLine();
+      $('progress').textContent = '';
+    }
+    targetKeys = toKeys(target);
+    typed = [];
+    lineStart = 0;
+    lineDone = false;
+    render();
+  }
+  function showFinished(st) {
+    finished = true;
+    lineDone = true;
+    $('target').textContent = `🎉 「${st.title}」 끝까지 다 썼어요!`;
+    $('target').classList.add('finish');
+    $('typed').textContent = '';
+    $('nextText').textContent = 'Enter를 누르면 처음부터 다시 써요';
+    $('progress').textContent = `📖 ${st.title} · 완료`;
+    document.querySelectorAll('.key.guide').forEach(k => k.classList.remove('guide', 'err'));
+    keyEl('Enter').classList.add('guide');
+    playFanfare();
+  }
+
+  // 지금까지 친 키가 정답의 앞부분과 같은 길이
+  function matchLen() {
+    let i = 0;
+    while (i < typed.length && typed[i] === targetKeys[i]) i++;
+    return i;
+  }
+
+  function render() {
+    const tChars = [...target];
+    const out = compose(typed);
+    const allRight = matchLen() === typed.length;
+
+    // 위: 따라 칠 글 (지금 칠 글자 표시)
+    const tBox = $('target');
+    tBox.textContent = '';
+    const curIdx = Math.max(0, allRight && typed.length && out[out.length - 1] !== tChars[out.length - 1] ? out.length - 1 : out.length);
+    tChars.forEach((ch, i) => {
+      const s = document.createElement('span');
+      s.textContent = ch;
+      if (i === curIdx && !lineDone) s.className = 'cur';
+      tBox.append(s);
+    });
+
+    // 아래: 내가 친 글
+    const box = $('typed');
+    box.textContent = '';
+    out.forEach((ch, i) => {
+      const s = document.createElement('span');
+      s.textContent = ch;
+      if (ch === tChars[i]) s.className = 'ok';
+      else s.className = 'bad';
+      box.append(s);
+    });
+    if (!lineDone) {
+      const caret = document.createElement('span');
+      caret.className = 'caret';
+      box.append(caret);
+    }
+    $('nextText').textContent = '다음: ' + nextLine;
+
+    // 다음에 누를 키 깜빡이기
+    document.querySelectorAll('.key.guide').forEach(k => k.classList.remove('guide', 'err'));
+    if (lineDone) return;
+    if (!allRight) {
+      keyEl('Backspace').classList.add('guide', 'err');
+      return;
+    }
+    const info = KEY_OF[targetKeys[typed.length]];
+    if (info) {
+      keyEl(info.code).classList.add('guide');
+      if (info.shift) {
+        // 오른손 키면 왼쪽 Shift, 왼손 키면 오른쪽 Shift
+        const left = FINGER_SIDE[info.code] === 'L';
+        keyEl(left ? 'ShiftRight' : 'ShiftLeft').classList.add('guide');
+      }
+    }
+  }
+
+  function updateStats() {
+    $('accuracy').textContent = totalKeys ? Math.round(goodKeys / totalKeys * 100) : 100;
+    $('lineCount').textContent = lines;
+    const min = (Date.now() - lineStart) / 60000;
+    $('speed').textContent = lineStart && min > 0 ? Math.round(matchLen() / min) : 0;
+  }
+
+  function press(code, shift) {
+    if (finished) { if (code === 'Enter') newLine(true); return; }
+    if (lineDone) return;
+    if (code === 'Backspace') {
+      typed.pop();
+    } else if (code === 'Enter') {
+      return;
+    } else {
+      const ch = TYPEABLE[code];
+      if (!ch) return;
+      if (typed.length >= targetKeys.length + 5) return;  // 너무 많이 치지 않게
+      if (!lineStart) lineStart = Date.now();
+      typed.push(shift ? ch[1] : ch[0]);
+      totalKeys++;
+      if (typed[typed.length - 1] === targetKeys[typed.length - 1] && matchLen() === typed.length) goodKeys++;
+    }
+    if (typed.length === targetKeys.length && matchLen() === typed.length) {
+      lineDone = true;
+      lines++;
+      playDingDong();
+      updateStats();
+      render();
+      setTimeout(() => newLine(false), 700);
+      return;
+    }
+    updateStats();
+    render();
+  }
+
+  // ===== 키보드 그리기 =====
+  const FINGER_SIDE = {};
+  function keyEl(code) { return document.querySelector(`.key[data-code="${code}"]`); }
+  function drawKeyboard() {
+    const kb = $('keyboard');
+    ROWS.forEach(row => {
+      const r = document.createElement('div');
+      r.className = 'krow';
+      // 키보드 가운데를 기준으로 왼손/오른손 구분
+      const half = row.reduce((a, k) => a + k[4], 0) / 2;
+      let x = 0;
+      row.forEach(([code, normal, shift, en, width, finger]) => {
+        FINGER_SIDE[code] = x + width / 2 < half ? 'L' : 'R';
+        x += width;
+        const k = document.createElement('div');
+        k.className = 'key' + (finger ? ' f' + finger : ' fn') + (code === 'KeyF' || code === 'KeyJ' ? ' home' : '');
+        k.dataset.code = code;
+        k.style.flexGrow = width;
+        k.textContent = normal;
+        if (shift && finger && shift !== normal.toUpperCase()) {
+          const s = document.createElement('span');
+          s.className = 'sh';
+          s.textContent = shift;
+          k.append(s);
+        }
+        if (en) {
+          const e = document.createElement('span');
+          e.className = 'en';
+          e.textContent = en;
+          k.append(e);
+        }
+        k.addEventListener('pointerdown', e => {
+          e.preventDefault();
+          getAudio();
+          if (code === 'ShiftLeft' || code === 'ShiftRight') {
+            stickyShift = !stickyShift;
+            document.querySelectorAll('[data-code^="Shift"]').forEach(s => s.classList.toggle('sticky', stickyShift));
+            return;
+          }
+          flash(code);
+          press(code, stickyShift);
+          if (stickyShift) {
+            stickyShift = false;
+            document.querySelectorAll('[data-code^="Shift"]').forEach(s => s.classList.remove('sticky'));
+          }
+        });
+        r.append(k);
+      });
+      kb.append(r);
+    });
+  }
+  function flash(code) {
+    const k = keyEl(code);
+    if (!k) return;
+    k.classList.add('down');
+    setTimeout(() => k.classList.remove('down'), 120);
+  }
+
+  // ===== 실제 키보드 =====
+  // 한/영 상태와 상관없이 키 위치(e.code)로 영문을 만듦
+  document.addEventListener('keydown', e => {
+    if (e.ctrlKey || e.altKey || e.metaKey) return;
+    const k = keyEl(e.code);
+    if (!k) return;
+    e.preventDefault();
+    k.classList.add('down');
+    const caps = e.getModifierState && e.getModifierState('CapsLock');
+    keyEl('CapsLock').classList.toggle('sticky', !!caps);
+    if (e.code.startsWith('Shift') || e.code === 'CapsLock') return;
+    const letter = e.code.startsWith('Key');
+    press(e.code, letter && caps ? !e.shiftKey : e.shiftKey);
+  });
+  document.addEventListener('keyup', e => {
+    const k = keyEl(e.code);
+    if (k) k.classList.remove('down');
+  });
+  window.addEventListener('blur', () =>
+    document.querySelectorAll('.key.down').forEach(k => k.classList.remove('down')));
+
+  // ===== 연습 종류 =====
+  document.querySelectorAll('.tabs button').forEach(b => b.addEventListener('click', () => {
+    mode = b.dataset.mode;
+    document.querySelectorAll('.tabs button').forEach(x => x.classList.toggle('on', x === b));
+    $('rowSelect').style.display = mode === 'jari' ? '' : 'none';
+    $('storySelect').style.display = mode === 'story' ? '' : 'none';
+    b.blur();
+    newLine(true);
+  }));
+  $('rowSelect').addEventListener('change', () => { $('rowSelect').blur(); newLine(true); });
+  // 긴 글 목록 (이솝 우화 / 명언 · 속담으로 묶음)
+  STORIES.forEach((st, i) => {
+    const sel = $('storySelect');
+    let group = [...sel.children].find(g => g.label === st.group);
+    if (!group) {
+      group = document.createElement('optgroup');
+      group.label = st.group;
+      sel.append(group);
+    }
+    group.append(new Option(st.title, i));
+  });
+  $('storySelect').addEventListener('change', () => { $('storySelect').blur(); newLine(true); });
+
+  // ===== 효과음 =====
+  let audioCtx;
+  function getAudio() {
+    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+    return audioCtx;
+  }
+  function tone(freq, start, dur, type, vol) {
+    const ctx = getAudio();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = type;
+    osc.frequency.value = freq;
+    const t = ctx.currentTime + start;
+    gain.gain.setValueAtTime(0, t);
+    gain.gain.linearRampToValueAtTime(vol, t + 0.01);
+    gain.gain.exponentialRampToValueAtTime(0.001, t + dur);
+    osc.connect(gain).connect(ctx.destination);
+    osc.start(t);
+    osc.stop(t + dur);
+  }
+  function playFanfare() {
+    [[523.25, 0], [659.25, 0.15], [783.99, 0.3], [1046.5, 0.45]].forEach(([f, s]) =>
+      tone(f, s, s === 0.45 ? 0.9 : 0.2, 'triangle', 0.35));
+  }
+  function playDingDong() { tone(1046.5, 0, 0.4, 'sine', 0.4); tone(784, 0.2, 0.6, 'sine', 0.4); }
+  ['keydown', 'pointerdown'].forEach(ev =>
+    document.addEventListener(ev, getAudio, { once: true }));
+
+  drawKeyboard();
+  newLine(true);
+</script>
+</body>
+</html>

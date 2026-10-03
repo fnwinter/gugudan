@@ -13,6 +13,7 @@
     --warn: #f59e0b;
     --hanja: #b91c1c;
     --typing: #7c3aed;
+    --typing-en: #0891b2;
     --box: #ffffff;
   }
   * { box-sizing: border-box; }
@@ -39,7 +40,7 @@
     justify-content: center;
     gap: 24px;
     width: 100%;
-    max-width: 1000px;
+    max-width: 800px;
   }
   .card {
     flex: 1 1 220px;
@@ -60,6 +61,7 @@
   .card.sentence { border-color: var(--warn); }
   .card.hanja { border-color: var(--hanja); }
   .card.typing { border-color: var(--typing); }
+  .card.typing-en { border-color: var(--typing-en); }
 
   .icon {
     font-size: clamp(56px, 12vw, 88px);
@@ -94,6 +96,10 @@
     <a class="card typing" href="keyboard_korean.html">
       <div class="icon">⌨️</div>
       <div class="name">한글 타자</div>
+    </a>
+    <a class="card typing-en" href="keyboard_english.html">
+      <div class="icon">🅰️</div>
+      <div class="name">영어 타자</div>
     </a>
   </div>
 </body>
