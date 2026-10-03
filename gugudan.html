@@ -218,9 +218,9 @@
 
   const $ = id => document.getElementById(id);
   const d1 = $('d1'), d2 = $('d2');
-  let n, m, deadline, timerId, locked = false;
+  let n, m, deadline, timerId, lastTickSec, locked = false;
   let okCount = 0, badCount = 0;
-  let wrongList = [];    // 이번 20문제 동안 틀린 문제 [n, m]
+  let wrongList = [];    // 이번 10문제 동안 틀린 문제 [n, m]
   let reviewQueue = [];  // 다시 풀 문제
   let reviewTotal = 0, reviewing = false;
 
@@ -251,6 +251,9 @@
   }
   function playBeep() {               // 삑-
     tone(220, 0, 0.5, 'square', 0.25);
+  }
+  function playTick(high) {           // 째깍(높은음) / 짹각(낮은음)
+    tone(high ? 1800 : 1400, 0, 0.05, 'square', 0.15);
   }
   function playFanfare(delay) {       // 빠-빠-빠-빠밤!
     const notes = [
@@ -316,13 +319,20 @@
     clearInterval(timerId);
     deadline = Date.now() + TIME_LIMIT * 1000;
     tick();
+    lastTickSec = null;
     timerId = setInterval(tick, 100);
   }
 
   function tick() {
     const left = Math.max(0, deadline - Date.now());
     const ratio = left / (TIME_LIMIT * 1000);
-    $('timeText').textContent = Math.ceil(left / 1000);
+    const sec = Math.ceil(left / 1000);
+    $('timeText').textContent = sec;
+    // 10초 남았을 때부터 1초마다 째깍째깍
+    if (left > 0 && sec <= 10 && sec !== lastTickSec) {
+      lastTickSec = sec;
+      playTick(sec % 2 === 0);
+    }
     const bar = $('barFill');
     bar.style.width = (ratio * 100) + '%';
     bar.style.background = ratio > 0.5 ? 'var(--accent)' : ratio > 0.2 ? 'var(--warn)' : 'var(--bad)';
@@ -346,7 +356,7 @@
 
     if (correct) playDingDong(); else playBeep();
 
-    // 다시 풀기 문제는 점수와 20문제 카운트에 넣지 않음
+    // 다시 풀기 문제는 점수와 10문제 카운트에 넣지 않음
     let total = okCount + badCount, milestone = false;
     if (!reviewing) {
       if (correct) okCount++;
@@ -359,8 +369,8 @@
       $('badCount').textContent = badCount;
       $('totalCount').textContent = total;
 
-      // 20문제마다 빵빠레 + 틀린 문제 다시 풀기 준비
-      milestone = total % 20 === 0;
+      // 10문제마다 빵빠레 + 틀린 문제 다시 풀기 준비
+      milestone = total % 10 === 0;
       if (milestone) {
         playFanfare(0.9);
         reviewQueue = wrongList;
