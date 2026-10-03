@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>영어 단어 연습</title>
+<style>
+  :root {
+    --bg: #fdf8ee;
+    --ink: #2b2b2b;
+    --accent: #3b82f6;
+    --ok: #16a34a;
+    --bad: #dc2626;
+    --warn: #f59e0b;
+    --box: #ffffff;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; }
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: "Segoe UI", "Malgun Gothic", sans-serif;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  /* 상단 타이머 */
+  .top {
+    width: 100%;
+    max-width: 900px;
+    padding: 20px 16px 0;
+  }
+  .top-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    flex-wrap: wrap;
+    gap: 8px;
+    font-size: clamp(20px, 4vw, 32px);
+    font-weight: 700;
+    margin-bottom: 10px;
+  }
+  #timeText { font-variant-numeric: tabular-nums; }
+  .bar {
+    height: 22px;
+    background: #e5e7eb;
+    border-radius: 11px;
+    overflow: hidden;
+  }
+  #barFill {
+    height: 100%;
+    width: 100%;
+    background: var(--accent);
+    transition: width 0.1s linear, background 0.3s;
+  }
+
+  /* 가운데 문제 */
+  main {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 30px;
+    width: 100%;
+    padding: 16px;
+  }
+  .meaning {
+    font-size: clamp(40px, 9vw, 96px);
+    font-weight: 800;
+    text-align: center;
+    line-height: 1.2;
+    word-break: keep-all;
+  }
+  #answer {
+    width: min(90vw, 700px);
+    font-size: clamp(36px, 8vw, 80px);
+    font-weight: 800;
+    font-family: inherit;
+    text-align: center;
+    color: var(--accent);
+    background: var(--box);
+    border: 6px solid #9ca3af;
+    border-radius: 18px;
+    outline: none;
+    padding: 8px 16px;
+  }
+  #answer:focus { border-color: var(--accent); box-shadow: 0 0 0 6px rgba(59,130,246,.2); }
+  #answer:disabled { color: var(--ink); }
+
+  .hint { font-size: clamp(16px, 3vw, 22px); color: #6b7280; text-align: center; }
+  button {
+    font-size: clamp(22px, 4vw, 32px);
+    font-weight: 700;
+    padding: 14px 40px;
+    border: none;
+    border-radius: 14px;
+    background: var(--accent);
+    color: #fff;
+    cursor: pointer;
+  }
+  button:active { transform: scale(.97); }
+  button.sub { background: #6b7280; }
+  #editBtn { font-size: clamp(16px, 3vw, 22px); padding: 8px 20px; }
+
+  /* O / X 표시 */
+  #mark {
+    position: fixed;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity .15s;
+  }
+  #mark.show { opacity: 1; }
+  #markSymbol {
+    font-size: clamp(220px, 50vw, 520px);
+    font-weight: 900;
+    line-height: 1;
+    text-shadow: 0 6px 24px rgba(0,0,0,.15);
+  }
+  #markSymbol.ok { color: var(--ok); }
+  #markSymbol.bad { color: var(--bad); }
+  #markMsg {
+    font-size: clamp(24px, 5vw, 44px);
+    font-weight: 700;
+    background: rgba(255,255,255,.9);
+    padding: 8px 24px;
+    border-radius: 12px;
+    text-align: center;
+  }
+  #markMsg:empty { display: none; }
+
+  /* 문제 입력 창 */
+  #editor {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,.45);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+  }
+  #editor.show { display: flex; }
+  .panel {
+    background: var(--box);
+    border-radius: 18px;
+    padding: 24px;
+    width: min(100%, 700px);
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+  .panel h2 { margin: 0; font-size: clamp(22px, 4vw, 30px); }
+  #wordList {
+    width: 100%;
+    height: 50vh;
+    font-size: 20px;
+    font-family: inherit;
+    padding: 12px;
+    border: 3px solid #9ca3af;
+    border-radius: 12px;
+    resize: vertical;
+  }
+  #wordList:focus { outline: none; border-color: var(--accent); }
+  #editorError { color: var(--bad); font-weight: 700; min-height: 1.2em; }
+  .panel-btns { display: flex; gap: 12px; justify-content: flex-end; }
+</style>
+</head>
+<body>
+  <div class="top">
+    <div class="top-row">
+      <span>⏰ <span id="timeText">30</span>초</span>
+      <span>📝 <span id="totalCount">0</span>문제 &nbsp; ⭕ <span id="okCount">0</span> &nbsp; ❌ <span id="badCount">0</span></span>
+      <button id="editBtn" class="sub">문제</button>
+    </div>
+    <div class="bar"><div id="barFill"></div></div>
+  </div>
+
+  <main>
+    <div class="meaning" id="meaning"></div>
+    <input id="answer" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false">
+    <button id="submitBtn">확인</button>
+    <div class="hint">뜻을 보고 영어 철자를 입력하고 Enter!</div>
+  </main>
+
+  <div id="mark"><div id="markSymbol"></div><div id="markMsg"></div></div>
+
+  <div id="editor">
+    <div class="panel">
+      <h2>문제 입력</h2>
+      <div class="hint" style="text-align:left">한 줄에 하나씩 <b>spelling,뜻</b> 형식으로 적어 주세요.</div>
+      <textarea id="wordList" spellcheck="false" placeholder="apple,사과&#10;banana,바나나&#10;school,학교"></textarea>
+      <div id="editorError"></div>
+      <div class="panel-btns">
+        <button id="cancelBtn" class="sub">취소</button>
+        <button id="saveBtn">저장</button>
+      </div>
+    </div>
+  </div>
+
+<script>
+  const TIME_LIMIT = 30;     // 초
+  const NEXT_DELAY = 1500;   // O/X 보여주는 시간(ms)
+  const WRONG_DELAY = 5000;  // 틀렸을 때 정답 보여주는 시간(ms)
+  const STORAGE_KEY = 'english-words';
+
+  const $ = id => document.getElementById(id);
+  const answerBox = $('answer');
+  let words = [], current = null, deadline, timerId, nextId, locked = false;
+  let okCount = 0, badCount = 0;
+
+  // 효과음 (Web Audio API로 직접 생성)
+  let audioCtx;
+  function getAudio() {
+    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+    return audioCtx;
+  }
+  function tone(freq, start, dur, type, vol) {
+    const ctx = getAudio();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = type;
+    osc.frequency.value = freq;
+    const t = ctx.currentTime + start;
+    gain.gain.setValueAtTime(0, t);
+    gain.gain.linearRampToValueAtTime(vol, t + 0.01);
+    gain.gain.exponentialRampToValueAtTime(0.001, t + dur);
+    osc.connect(gain).connect(ctx.destination);
+    osc.start(t);
+    osc.stop(t + dur);
+  }
+  function playDingDong() {           // 띵(높은음) → 동(낮은음)
+    tone(1046.5, 0, 0.6, 'sine', 0.5);   // C6
+    tone(784, 0.35, 0.9, 'sine', 0.5);   // G5
+  }
+  function playBeep() {               // 삑-
+    tone(220, 0, 0.5, 'square', 0.25);
+  }
+  function playFanfare(delay) {       // 빠-빠-빠-빠밤!
+    const notes = [
+      [523.25, 0.00, 0.15], [523.25, 0.16, 0.15], [523.25, 0.32, 0.15],  // C5 C5 C5
+      [659.25, 0.48, 0.30], [587.33, 0.80, 0.15], [659.25, 0.96, 0.15],  // E5 D5 E5
+      [783.99, 1.12, 0.90],                                              // G5 ~
+    ];
+    notes.forEach(([f, s, d]) => {
+      tone(f, delay + s, d + 0.1, 'triangle', 0.35);
+      tone(f * 2, delay + s, d + 0.1, 'sawtooth', 0.06);  // 금관 느낌 배음
+    });
+    // 마지막 화음
+    tone(523.25, delay + 1.12, 1.0, 'triangle', 0.2);
+    tone(659.25, delay + 1.12, 1.0, 'triangle', 0.2);
+  }
+
+  // "spelling,뜻" 줄들을 단어 목록으로 변환 (뜻 안의 쉼표는 그대로 둠)
+  function parseWords(text) {
+    const list = [], bad = [];
+    text.split('\n').forEach((line, i) => {
+      line = line.trim();
+      if (!line) return;
+      const at = line.indexOf(',');
+      const spelling = at < 0 ? '' : line.slice(0, at).trim();
+      const meaning = at < 0 ? '' : line.slice(at + 1).trim();
+      if (spelling && meaning) list.push({ spelling, meaning });
+      else bad.push(i + 1);
+    });
+    return { list, bad };
+  }
+  function wordsToText(list) { return list.map(w => `${w.spelling},${w.meaning}`).join('\n'); }
+
+  function loadWords() {
+    try { words = JSON.parse(localStorage.getItem(STORAGE_KEY)) || []; } catch { words = []; }
+  }
+  function saveWords() {
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(words)); } catch {}
+  }
+
+  function newProblem() {
+    if (words.length === 0) { openEditor(); return; }
+    let w;
+    do { w = words[Math.floor(Math.random() * words.length)]; }
+    while (words.length > 1 && w === current);  // 같은 문제 연속 방지
+    current = w;
+    $('meaning').textContent = w.meaning;
+    answerBox.value = '';
+    answerBox.disabled = false;
+    locked = false;
+    answerBox.focus();
+    startTimer();
+  }
+
+  function startTimer() {
+    clearInterval(timerId);
+    deadline = Date.now() + TIME_LIMIT * 1000;
+    tick();
+    timerId = setInterval(tick, 100);
+  }
+
+  function tick() {
+    const left = Math.max(0, deadline - Date.now());
+    const ratio = left / (TIME_LIMIT * 1000);
+    $('timeText').textContent = Math.ceil(left / 1000);
+    const bar = $('barFill');
+    bar.style.width = (ratio * 100) + '%';
+    bar.style.background = ratio > 0.5 ? 'var(--accent)' : ratio > 0.2 ? 'var(--warn)' : 'var(--bad)';
+    if (left <= 0) finish(false, '시간 초과!');
+  }
+
+  function check() {
+    if (locked || !current) return;
+    const typed = answerBox.value.trim();
+    if (typed === '') { answerBox.focus(); return; }
+    // 대소문자, 여러 칸 띄어쓰기는 구분하지 않음
+    const norm = s => s.toLowerCase().replace(/\s+/g, ' ').trim();
+    finish(norm(typed) === norm(current.spelling), '');
+  }
+
+  function finish(correct, reason) {
+    if (locked) return;
+    locked = true;
+    clearInterval(timerId);
+    answerBox.disabled = true;
+
+    if (correct) { okCount++; playDingDong(); } else { badCount++; playBeep(); }
+    const total = okCount + badCount;
+    $('okCount').textContent = okCount;
+    $('badCount').textContent = badCount;
+    $('totalCount').textContent = total;
+
+    // 20문제마다 빵빠레
+    const milestone = total % 20 === 0;
+    if (milestone) playFanfare(0.9);
+
+    const sym = $('markSymbol');
+    sym.textContent = correct ? 'O' : 'X';
+    sym.className = correct ? 'ok' : 'bad';
+    const msg = $('markMsg');
+    msg.textContent = '';
+    if (!correct) msg.append(`${reason} 정답: ${current.spelling} (${current.meaning})`.trim());
+    if (milestone) {
+      if (!correct) msg.append(document.createElement('br'));
+      msg.append(`🎉 ${total}문제 돌파! 🎉`);
+    }
+    $('mark').classList.add('show');
+
+    let delay = correct ? NEXT_DELAY : WRONG_DELAY;
+    if (milestone) delay = Math.max(delay, 3000);  // 빵빠레 끝날 때까지 대기
+    nextId = setTimeout(() => {
+      $('mark').classList.remove('show');
+      newProblem();
+    }, delay);
+  }
+
+  // 문제 입력 창
+  function openEditor() {
+    clearInterval(timerId);
+    clearTimeout(nextId);
+    $('mark').classList.remove('show');
+    locked = true;
+    $('wordList').value = wordsToText(words);
+    $('editorError').textContent = '';
+    $('cancelBtn').style.display = words.length ? '' : 'none';
+    $('editor').classList.add('show');
+    $('wordList').focus();
+  }
+  function closeEditor() {
+    $('editor').classList.remove('show');
+    newProblem();
+  }
+  $('editBtn').addEventListener('click', openEditor);
+  $('cancelBtn').addEventListener('click', closeEditor);
+  $('saveBtn').addEventListener('click', () => {
+    const { list, bad } = parseWords($('wordList').value);
+    if (bad.length) {
+      $('editorError').textContent = `${bad.join(', ')}번째 줄을 "spelling,뜻" 형식으로 고쳐 주세요.`;
+      return;
+    }
+    if (list.length === 0) {
+      $('editorError').textContent = '문제를 한 개 이상 입력해 주세요.';
+      return;
+    }
+    words = list;
+    saveWords();
+    current = null;
+    closeEditor();
+  });
+
+  answerBox.addEventListener('keydown', e => {
+    if (e.key === 'Enter' && !e.isComposing) { e.preventDefault(); check(); }
+  });
+  $('submitBtn').addEventListener('click', check);
+
+  // 브라우저는 사용자가 한 번 조작해야 소리를 허용하므로, 첫 입력 때 오디오를 미리 켜 둠
+  ['keydown', 'pointerdown'].forEach(ev =>
+    document.addEventListener(ev, getAudio, { once: true }));
+
+  loadWords();
+  newProblem();
+</script>
+</body>
+</html>
