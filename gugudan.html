@@ -267,7 +267,28 @@
     tone(659.25, delay + 1.12, 1.0, 'triangle', 0.2);
   }
 
-  function rand(min, max) { return Math.floor(Math.random() * (max - min + 1)) + min; }
+  function shuffle(arr) {
+    for (let i = arr.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+    return arr;
+  }
+
+  // 한 번 나온 문제는 모든 문제가 다 나올 때까지 다시 나오지 않음
+  let deck = [], deckDan = null;
+  function nextFromDeck(dan) {
+    if (deck.length === 0 || deckDan !== dan) {
+      deck = [];
+      for (let a = dan || 2; a <= (dan || 9); a++)
+        for (let b = 1; b <= 9; b++) deck.push([a, b]);
+      shuffle(deck);
+      deckDan = dan;
+      // 새로 섞은 첫 문제가 직전 문제와 같으면 뒤로 보냄
+      if (deck.length > 1 && deck[0][0] === n && deck[0][1] === m) deck.push(deck.shift());
+    }
+    return deck.shift();
+  }
 
   function newProblem() {
     reviewing = reviewQueue.length > 0;
@@ -279,10 +300,8 @@
       badge.hidden = false;
     } else {
       badge.hidden = true;
-      let nn, mm;
       const dan = parseInt($('danSelect').value, 10);  // 0이면 전체
-      do { nn = dan || rand(2, 9); mm = rand(1, 9); } while (nn === n && mm === m); // 같은 문제 연속 방지
-      n = nn; m = mm;
+      [n, m] = nextFromDeck(dan);
     }
     $('n').textContent = n;
     $('m').textContent = m;

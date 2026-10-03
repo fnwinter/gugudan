@@ -1333,17 +1333,31 @@
     }
   }
 
+  // 한 번 나온 한자는 목록을 다 풀 때까지 다시 나오지 않음
+  let deck = [];
+  function shuffle(arr) {
+    for (let i = arr.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+    return arr;
+  }
+
   function restart() {
     clearTimeout(nextId);
+    deck = [];
     $('mark').classList.remove('show');
     current = null;
     newProblem();
   }
 
   function newProblem() {
-    let w;
-    do { w = words[Math.floor(Math.random() * words.length)]; }
-    while (words.length > 1 && w === current);  // 같은 문제 연속 방지
+    if (deck.length === 0) {
+      deck = shuffle(words.slice());
+      // 새로 섞은 첫 문제가 직전 문제와 같으면 뒤로 보냄
+      if (deck.length > 1 && deck[0] === current) deck.push(deck.shift());
+    }
+    const w = deck.shift();
     current = w;
     step = 'hanja';
     $('hanja').textContent = w.hanja;
