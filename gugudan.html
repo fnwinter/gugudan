@@ -35,7 +35,9 @@
   .top-row {
     display: flex;
     justify-content: space-between;
-    align-items: baseline;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
     font-size: clamp(20px, 4vw, 32px);
     font-weight: 700;
     margin-bottom: 10px;
@@ -135,11 +137,24 @@
     text-align: center;
   }
   #markMsg:empty { display: none; }
+  .home {
+    display: inline-block;
+    font-size: clamp(16px, 3vw, 22px);
+    font-weight: 700;
+    padding: 8px 16px;
+    border-radius: 12px;
+    background: #e5e7eb;
+    color: var(--ink);
+    text-decoration: none;
+    white-space: nowrap;
+  }
+  .home:active { transform: scale(.97); }
 </style>
 </head>
 <body>
   <div class="top">
     <div class="top-row">
+      <a class="home" href="index.html">🏠 처음으로</a>
       <span>⏰ <span id="timeText">30</span>초</span>
       <span>📝 <span id="totalCount">0</span>문제 &nbsp; ⭕ <span id="okCount">0</span> &nbsp; ❌ <span id="badCount">0</span></span>
     </div>

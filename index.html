@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>연습 고르기</title>
+<style>
+  :root {
+    --bg: #fdf8ee;
+    --ink: #2b2b2b;
+    --accent: #3b82f6;
+    --ok: #16a34a;
+    --warn: #f59e0b;
+    --hanja: #b91c1c;
+    --typing: #7c3aed;
+    --box: #ffffff;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; }
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: "Segoe UI", "Malgun Gothic", sans-serif;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+  }
+
+  h1 {
+    font-size: clamp(32px, 7vw, 56px);
+    margin: 0 0 40px;
+  }
+
+  .menu {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 24px;
+    width: 100%;
+    max-width: 1000px;
+  }
+  .card {
+    flex: 1 1 220px;
+    max-width: 320px;
+    background: var(--box);
+    border: 4px solid var(--accent);
+    border-radius: 24px;
+    padding: 40px 24px;
+    text-align: center;
+    text-decoration: none;
+    color: var(--ink);
+    box-shadow: 0 6px 0 rgba(0, 0, 0, 0.12);
+    transition: transform 0.1s, box-shadow 0.1s;
+  }
+  .card:hover { transform: translateY(-4px); box-shadow: 0 10px 0 rgba(0, 0, 0, 0.12); }
+  .card:active { transform: translateY(2px); box-shadow: 0 2px 0 rgba(0, 0, 0, 0.12); }
+  .card.english { border-color: var(--ok); }
+  .card.sentence { border-color: var(--warn); }
+  .card.hanja { border-color: var(--hanja); }
+  .card.typing { border-color: var(--typing); }
+
+  .icon {
+    font-size: clamp(56px, 12vw, 88px);
+    line-height: 1;
+    margin-bottom: 16px;
+  }
+  .name {
+    font-size: clamp(28px, 6vw, 40px);
+    font-weight: 700;
+  }
+</style>
+</head>
+<body>
+  <h1>무엇을 연습할까요?</h1>
+  <div class="menu">
+    <a class="card" href="gugudan.html">
+      <div class="icon">✖️</div>
+      <div class="name">구구단</div>
+    </a>
+    <a class="card english" href="english.html">
+      <div class="icon">🔤</div>
+      <div class="name">영단어</div>
+    </a>
+    <a class="card sentence" href="sentence.html">
+      <div class="icon">💬</div>
+      <div class="name">문장 암기</div>
+    </a>
+    <a class="card hanja" href="hanja.html">
+      <div class="icon">漢</div>
+      <div class="name">한자</div>
+    </a>
+    <a class="card typing" href="keyboard_korean.html">
+      <div class="icon">⌨️</div>
+      <div class="name">한글 타자</div>
+    </a>
+  </div>
+</body>
+</html>

@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>영어 단어 연습</title>
+<title>한자 연습</title>
 <style>
   :root {
     --bg: #fdf8ee;
@@ -11,8 +11,9 @@
     --accent: #3b82f6;
     --ok: #16a34a;
     --bad: #dc2626;
-    --warn: #f59e0b;
+    --hanja: #b91c1c;
     --box: #ffffff;
+    --muted: #6b7280;
   }
   * { box-sizing: border-box; }
   html, body { margin: 0; height: 100%; }
@@ -25,13 +26,11 @@
     align-items: center;
   }
 
-  /* 상단 타이머 */
+  /* 상단 */
   .top {
     width: 100%;
     max-width: 900px;
     padding: 20px 16px 0;
-  }
-  .top-row {
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -39,20 +38,6 @@
     gap: 8px;
     font-size: clamp(20px, 4vw, 32px);
     font-weight: 700;
-    margin-bottom: 10px;
-  }
-  #timeText { font-variant-numeric: tabular-nums; }
-  .bar {
-    height: 22px;
-    background: #e5e7eb;
-    border-radius: 11px;
-    overflow: hidden;
-  }
-  #barFill {
-    height: 100%;
-    width: 100%;
-    background: var(--accent);
-    transition: width 0.1s linear, background 0.3s;
   }
 
   /* 가운데 문제 */
@@ -62,34 +47,44 @@
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 30px;
+    gap: 24px;
     width: 100%;
     padding: 16px;
   }
-  .meaning {
-    font-size: clamp(40px, 9vw, 96px);
-    font-weight: 800;
-    text-align: center;
-    line-height: 1.2;
-    word-break: keep-all;
+  .hanja {
+    font-size: clamp(140px, 35vw, 280px);
+    font-weight: 400;
+    line-height: 1;
+    color: var(--hanja);
+    font-family: "Batang", "바탕", "Noto Serif KR", "Malgun Gothic", serif;
   }
-  #answer {
-    width: min(90vw, 700px);
-    font-size: clamp(36px, 8vw, 80px);
+  .reading {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    font-size: clamp(40px, 9vw, 80px);
+    font-weight: 800;
+    visibility: hidden;
+  }
+  .reading.show { visibility: visible; }
+  .bracket { color: var(--muted); font-weight: 400; }
+  #sound {
+    width: 2.6em;
+    font-size: inherit;
     font-weight: 800;
     font-family: inherit;
     text-align: center;
     color: var(--accent);
     background: var(--box);
-    border: 6px solid #9ca3af;
-    border-radius: 18px;
+    border: none;
+    border-bottom: 6px solid #9ca3af;
     outline: none;
-    padding: 8px 16px;
+    padding: 0;
   }
-  #answer:focus { border-color: var(--accent); box-shadow: 0 0 0 6px rgba(59,130,246,.2); }
-  #answer:disabled { color: var(--ink); }
+  #sound:focus { border-bottom-color: var(--accent); }
+  #sound:disabled { color: var(--ink); }
 
-  .hint { font-size: clamp(16px, 3vw, 22px); color: #6b7280; text-align: center; }
+  .hint { font-size: clamp(16px, 3vw, 22px); color: var(--muted); text-align: center; }
   button {
     font-size: clamp(22px, 4vw, 32px);
     font-weight: 700;
@@ -99,9 +94,10 @@
     background: var(--accent);
     color: #fff;
     cursor: pointer;
+    font-family: inherit;
   }
   button:active { transform: scale(.97); }
-  button.sub { background: #6b7280; }
+  button.sub { background: var(--muted); }
   #editBtn { font-size: clamp(16px, 3vw, 22px); padding: 8px 20px; }
 
   /* O / X 표시 */
@@ -156,7 +152,7 @@
     gap: 14px;
   }
   .panel h2 { margin: 0; font-size: clamp(22px, 4vw, 30px); }
-  #wordList {
+  #hanjaList {
     width: 100%;
     height: 50vh;
     font-size: 20px;
@@ -166,9 +162,11 @@
     border-radius: 12px;
     resize: vertical;
   }
-  #wordList:focus { outline: none; border-color: var(--accent); }
+  #hanjaList:focus { outline: none; border-color: var(--accent); }
   #editorError { color: var(--bad); font-weight: 700; min-height: 1.2em; }
-  .panel-btns { display: flex; gap: 12px; justify-content: flex-end; }
+  .panel-btns { display: flex; flex-wrap: wrap; gap: 12px; justify-content: flex-end; }
+  .panel-btns button { padding: 10px 24px; }
+  #resetBtn { margin-right: auto; }
   .home {
     display: inline-block;
     font-size: clamp(16px, 3vw, 22px);
@@ -185,20 +183,19 @@
 </head>
 <body>
   <div class="top">
-    <div class="top-row">
-      <a class="home" href="index.html">🏠 처음으로</a>
-      <span>⏰ <span id="timeText">30</span>초</span>
-      <span>📝 <span id="totalCount">0</span>문제 &nbsp; ⭕ <span id="okCount">0</span> &nbsp; ❌ <span id="badCount">0</span></span>
-      <button id="editBtn" class="sub">문제</button>
-    </div>
-    <div class="bar"><div id="barFill"></div></div>
+    <a class="home" href="index.html">🏠 처음으로</a>
+    <span>📝 <span id="totalCount">0</span>문제 &nbsp; ⭕ <span id="okCount">0</span> &nbsp; ❌ <span id="badCount">0</span></span>
+    <button id="editBtn" class="sub">문제</button>
   </div>
 
   <main>
-    <div class="meaning" id="meaning"></div>
-    <input id="answer" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false">
-    <button id="submitBtn">확인</button>
-    <div class="hint">뜻을 보고 영어 철자를 입력하고 Enter!</div>
+    <div class="hanja" id="hanja"></div>
+    <div class="reading" id="reading">
+      <span id="meaning"></span>
+      <span><span class="bracket">[</span><input id="sound" autocomplete="off" spellcheck="false"><span class="bracket">]</span></span>
+    </div>
+    <button id="actionBtn">뜻 보기</button>
+    <div class="hint" id="hint">Enter를 누르면 뜻이 나와요</div>
   </main>
 
   <div id="mark"><div id="markSymbol"></div><div id="markMsg"></div></div>
@@ -206,10 +203,14 @@
   <div id="editor">
     <div class="panel">
       <h2>문제 입력</h2>
-      <div class="hint" style="text-align:left">한 줄에 하나씩 <b>spelling,뜻</b> 형식으로 적어 주세요.</div>
-      <textarea id="wordList" spellcheck="false" placeholder="apple,사과&#10;banana,바나나&#10;school,학교"></textarea>
+      <div class="hint" style="text-align:left">
+        한 줄에 하나씩 <b>한자,뜻,음</b> 형식으로 적어 주세요.<br>
+        음이 여러 개면 <b>/</b>로 나눠요. (예: 六,여섯,륙/육)
+      </div>
+      <textarea id="hanjaList" spellcheck="false" placeholder="一,한,일&#10;山,메,산&#10;六,여섯,륙/육"></textarea>
       <div id="editorError"></div>
       <div class="panel-btns">
+        <button id="resetBtn" class="sub">기본 한자로</button>
         <button id="cancelBtn" class="sub">취소</button>
         <button id="saveBtn">저장</button>
       </div>
@@ -217,14 +218,69 @@
   </div>
 
 <script>
-  const TIME_LIMIT = 30;     // 초
-  const NEXT_DELAY = 1500;   // O/X 보여주는 시간(ms)
-  const WRONG_DELAY = 5000;  // 틀렸을 때 정답 보여주는 시간(ms)
-  const STORAGE_KEY = 'english-words';
+  const NEXT_DELAY = 1500;   // 맞았을 때 O 보여주는 시간(ms)
+  const WRONG_DELAY = 3000;  // 틀렸을 때 정답 보여주는 시간(ms)
+  const STORAGE_KEY = 'hanja-words';
+
+  // 기본 문제: 8급 한자
+  const DEFAULT_TEXT = `一,한,일
+二,두,이
+三,석,삼
+四,넉,사
+五,다섯,오
+六,여섯,륙/육
+七,일곱,칠
+八,여덟,팔
+九,아홉,구
+十,열,십
+日,날,일
+月,달,월
+火,불,화
+水,물,수
+木,나무,목
+金,쇠,금
+土,흙,토
+山,메,산
+人,사람,인
+大,큰,대
+小,작을,소
+中,가운데,중
+上,윗,상
+下,아래,하
+父,아비,부
+母,어미,모
+兄,형,형
+弟,아우,제
+女,계집,녀/여
+子,아들,자
+王,임금,왕
+年,해,년/연
+先,먼저,선
+生,날,생
+學,배울,학
+校,학교,교
+敎,가르칠,교
+東,동녘,동
+西,서녘,서
+南,남녘,남
+北,북녘,북
+門,문,문
+白,흰,백
+靑,푸를,청
+長,긴,장
+寸,마디,촌
+外,바깥,외
+國,나라,국
+民,백성,민
+軍,군사,군
+室,집,실
+萬,일만,만
+韓,나라,한`;
 
   const $ = id => document.getElementById(id);
-  const answerBox = $('answer');
-  let words = [], current = null, deadline, timerId, nextId, locked = false;
+  const soundBox = $('sound');
+  // step: 'hanja'(한자만 보임) → 'sound'(뜻 보이고 음 입력) → 'done'(O/X 표시 중)
+  let words = [], current = null, step = 'hanja', nextId;
   let okCount = 0, badCount = 0;
 
   // 효과음 (Web Audio API로 직접 생성)
@@ -248,149 +304,131 @@
     osc.start(t);
     osc.stop(t + dur);
   }
-  function playDingDong() {           // 띵(높은음) → 동(낮은음)
-    tone(1046.5, 0, 0.6, 'sine', 0.5);   // C6
-    tone(784, 0.35, 0.9, 'sine', 0.5);   // G5
-  }
-  function playBeep() {               // 삑-
-    tone(220, 0, 0.5, 'square', 0.25);
-  }
-  function playFanfare(delay) {       // 빠-빠-빠-빠밤!
-    const notes = [
-      [523.25, 0.00, 0.15], [523.25, 0.16, 0.15], [523.25, 0.32, 0.15],  // C5 C5 C5
-      [659.25, 0.48, 0.30], [587.33, 0.80, 0.15], [659.25, 0.96, 0.15],  // E5 D5 E5
-      [783.99, 1.12, 0.90],                                              // G5 ~
-    ];
-    notes.forEach(([f, s, d]) => {
-      tone(f, delay + s, d + 0.1, 'triangle', 0.35);
-      tone(f * 2, delay + s, d + 0.1, 'sawtooth', 0.06);  // 금관 느낌 배음
-    });
-    // 마지막 화음
-    tone(523.25, delay + 1.12, 1.0, 'triangle', 0.2);
-    tone(659.25, delay + 1.12, 1.0, 'triangle', 0.2);
-  }
+  function playDingDong() { tone(1046.5, 0, 0.6, 'sine', 0.5); tone(784, 0.35, 0.9, 'sine', 0.5); }
+  function playBeep() { tone(220, 0, 0.5, 'square', 0.25); }
 
-  // "spelling,뜻" 줄들을 단어 목록으로 변환 (뜻 안의 쉼표는 그대로 둠)
+  // "한자,뜻,음" 줄들을 문제 목록으로 변환
   function parseWords(text) {
     const list = [], bad = [];
     text.split('\n').forEach((line, i) => {
       line = line.trim();
       if (!line) return;
-      const at = line.indexOf(',');
-      const spelling = at < 0 ? '' : line.slice(0, at).trim();
-      const meaning = at < 0 ? '' : line.slice(at + 1).trim();
-      if (spelling && meaning) list.push({ spelling, meaning });
+      const [hanja, meaning, sound] = line.split(',').map(s => (s || '').trim());
+      if (hanja && meaning && sound) list.push({ hanja, meaning, sound });
       else bad.push(i + 1);
     });
     return { list, bad };
   }
-  function wordsToText(list) { return list.map(w => `${w.spelling},${w.meaning}`).join('\n'); }
+  function wordsToText(list) { return list.map(w => `${w.hanja},${w.meaning},${w.sound}`).join('\n'); }
 
   function loadWords() {
     try { words = JSON.parse(localStorage.getItem(STORAGE_KEY)) || []; } catch { words = []; }
+    if (!words.length) words = parseWords(DEFAULT_TEXT).list;
   }
   function saveWords() {
     try { localStorage.setItem(STORAGE_KEY, JSON.stringify(words)); } catch {}
   }
 
   function newProblem() {
-    if (words.length === 0) { openEditor(); return; }
     let w;
     do { w = words[Math.floor(Math.random() * words.length)]; }
     while (words.length > 1 && w === current);  // 같은 문제 연속 방지
     current = w;
+    step = 'hanja';
+    $('hanja').textContent = w.hanja;
     $('meaning').textContent = w.meaning;
-    answerBox.value = '';
-    answerBox.disabled = false;
-    locked = false;
-    answerBox.focus();
-    startTimer();
+    $('reading').classList.remove('show');
+    soundBox.value = '';
+    soundBox.disabled = true;
+    $('actionBtn').textContent = '뜻 보기';
+    $('hint').textContent = 'Enter를 누르면 뜻이 나와요';
+    $('actionBtn').focus();
   }
 
-  function startTimer() {
-    clearInterval(timerId);
-    deadline = Date.now() + TIME_LIMIT * 1000;
-    tick();
-    timerId = setInterval(tick, 100);
-  }
-
-  function tick() {
-    const left = Math.max(0, deadline - Date.now());
-    const ratio = left / (TIME_LIMIT * 1000);
-    $('timeText').textContent = Math.ceil(left / 1000);
-    const bar = $('barFill');
-    bar.style.width = (ratio * 100) + '%';
-    bar.style.background = ratio > 0.5 ? 'var(--accent)' : ratio > 0.2 ? 'var(--warn)' : 'var(--bad)';
-    if (left <= 0) finish(false, '시간 초과!');
+  function showMeaning() {
+    step = 'sound';
+    $('reading').classList.add('show');
+    soundBox.disabled = false;
+    soundBox.focus();
+    $('actionBtn').textContent = '확인';
+    $('hint').textContent = '[ ] 안에 음을 쓰고 Enter!';
   }
 
   function check() {
-    if (locked || !current) return;
-    const typed = answerBox.value.trim();
-    if (typed === '') { answerBox.focus(); return; }
-    // 대소문자, 여러 칸 띄어쓰기는 구분하지 않음
-    const norm = s => s.toLowerCase().replace(/\s+/g, ' ').trim();
-    finish(norm(typed) === norm(current.spelling), '');
+    if (step !== 'sound') return;
+    const typed = soundBox.value.replace(/[\s\[\]]/g, '');
+    if (typed === '') { soundBox.focus(); return; }
+    const answers = current.sound.split('/').map(s => s.trim());
+    finish(answers.includes(typed));
   }
 
-  function finish(correct, reason) {
-    if (locked) return;
-    locked = true;
-    clearInterval(timerId);
-    answerBox.disabled = true;
-
+  function finish(correct) {
+    step = 'done';
+    soundBox.disabled = true;
     if (correct) { okCount++; playDingDong(); } else { badCount++; playBeep(); }
-    const total = okCount + badCount;
     $('okCount').textContent = okCount;
     $('badCount').textContent = badCount;
-    $('totalCount').textContent = total;
-
-    // 20문제마다 빵빠레
-    const milestone = total % 20 === 0;
-    if (milestone) playFanfare(0.9);
+    $('totalCount').textContent = okCount + badCount;
 
     const sym = $('markSymbol');
     sym.textContent = correct ? 'O' : 'X';
     sym.className = correct ? 'ok' : 'bad';
-    const msg = $('markMsg');
-    msg.textContent = '';
-    if (!correct) msg.append(`${reason} 정답: ${current.spelling} (${current.meaning})`.trim());
-    if (milestone) {
-      if (!correct) msg.append(document.createElement('br'));
-      msg.append(`🎉 ${total}문제 돌파! 🎉`);
-    }
+    $('markMsg').textContent = correct ? '' : `정답: ${current.hanja} ${current.meaning} [${current.sound}]`;
     $('mark').classList.add('show');
 
-    let delay = correct ? NEXT_DELAY : WRONG_DELAY;
-    if (milestone) delay = Math.max(delay, 3000);  // 빵빠레 끝날 때까지 대기
     nextId = setTimeout(() => {
       $('mark').classList.remove('show');
       newProblem();
-    }, delay);
+    }, correct ? NEXT_DELAY : WRONG_DELAY);
   }
+
+  function action() {
+    if (step === 'hanja') showMeaning();
+    else if (step === 'sound') check();
+  }
+
+  // 한글 입력 중 Enter를 누르면 글자 조합이 끝난 뒤에 채점
+  let submitAfterCompose = false;
+  soundBox.addEventListener('keydown', e => {
+    if (e.key !== 'Enter') return;
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.isComposing) submitAfterCompose = true;
+    else check();
+  });
+  soundBox.addEventListener('compositionend', () => {
+    if (submitAfterCompose) { submitAfterCompose = false; setTimeout(check, 0); }
+  });
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Enter' && step === 'hanja' && !$('editor').classList.contains('show')) {
+      e.preventDefault();
+      showMeaning();
+    }
+  });
+  $('actionBtn').addEventListener('click', action);
 
   // 문제 입력 창
   function openEditor() {
-    clearInterval(timerId);
     clearTimeout(nextId);
     $('mark').classList.remove('show');
-    locked = true;
-    $('wordList').value = wordsToText(words);
+    step = 'editing';
+    $('hanjaList').value = wordsToText(words);
     $('editorError').textContent = '';
-    $('cancelBtn').style.display = words.length ? '' : 'none';
     $('editor').classList.add('show');
-    $('wordList').focus();
+    $('hanjaList').focus();
   }
   function closeEditor() {
     $('editor').classList.remove('show');
+    current = null;
     newProblem();
   }
   $('editBtn').addEventListener('click', openEditor);
   $('cancelBtn').addEventListener('click', closeEditor);
+  $('resetBtn').addEventListener('click', () => { $('hanjaList').value = DEFAULT_TEXT; });
   $('saveBtn').addEventListener('click', () => {
-    const { list, bad } = parseWords($('wordList').value);
+    const { list, bad } = parseWords($('hanjaList').value);
     if (bad.length) {
-      $('editorError').textContent = `${bad.join(', ')}번째 줄을 "spelling,뜻" 형식으로 고쳐 주세요.`;
+      $('editorError').textContent = `${bad.join(', ')}번째 줄을 "한자,뜻,음" 형식으로 고쳐 주세요.`;
       return;
     }
     if (list.length === 0) {
@@ -399,14 +437,8 @@
     }
     words = list;
     saveWords();
-    current = null;
     closeEditor();
   });
-
-  answerBox.addEventListener('keydown', e => {
-    if (e.key === 'Enter' && !e.isComposing) { e.preventDefault(); check(); }
-  });
-  $('submitBtn').addEventListener('click', check);
 
   // 브라우저는 사용자가 한 번 조작해야 소리를 허용하므로, 첫 입력 때 오디오를 미리 켜 둠
   ['keydown', 'pointerdown'].forEach(ev =>
