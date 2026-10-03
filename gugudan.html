@@ -94,6 +94,16 @@
   .digit:focus { border-color: var(--accent); box-shadow: 0 0 0 6px rgba(59,130,246,.2); }
   .digit:disabled { color: var(--ink); }
 
+  #reviewBadge {
+    font-size: clamp(20px, 4vw, 30px);
+    font-weight: 700;
+    color: #fff;
+    background: var(--warn);
+    padding: 8px 24px;
+    border-radius: 999px;
+  }
+  #reviewBadge[hidden] { display: none; }
+
   .hint { font-size: clamp(16px, 3vw, 22px); color: #6b7280; text-align: center; }
   button {
     font-size: clamp(22px, 4vw, 32px);
@@ -149,12 +159,35 @@
     white-space: nowrap;
   }
   .home:active { transform: scale(.97); }
+  #danSelect {
+    font-size: clamp(16px, 3vw, 22px);
+    font-weight: 700;
+    font-family: inherit;
+    padding: 8px 12px;
+    border: none;
+    border-radius: 12px;
+    background: #e5e7eb;
+    color: var(--ink);
+    cursor: pointer;
+  }
 </style>
 </head>
 <body>
   <div class="top">
     <div class="top-row">
       <a class="home" href="index.html">🏠 처음으로</a>
+      <select id="danSelect" aria-label="단 선택">
+        <option value="0">전체 (2~9단)</option>
+        <option value="1">1단</option>
+        <option value="2">2단</option>
+        <option value="3">3단</option>
+        <option value="4">4단</option>
+        <option value="5">5단</option>
+        <option value="6">6단</option>
+        <option value="7">7단</option>
+        <option value="8">8단</option>
+        <option value="9">9단</option>
+      </select>
       <span>⏰ <span id="timeText">30</span>초</span>
       <span>📝 <span id="totalCount">0</span>문제 &nbsp; ⭕ <span id="okCount">0</span> &nbsp; ❌ <span id="badCount">0</span></span>
     </div>
@@ -162,6 +195,7 @@
   </div>
 
   <main>
+    <div id="reviewBadge" hidden></div>
     <div class="problem">
       <span id="n">2</span>
       <span>×</span>
@@ -186,6 +220,9 @@
   const d1 = $('d1'), d2 = $('d2');
   let n, m, deadline, timerId, locked = false;
   let okCount = 0, badCount = 0;
+  let wrongList = [];    // 이번 20문제 동안 틀린 문제 [n, m]
+  let reviewQueue = [];  // 다시 풀 문제
+  let reviewTotal = 0, reviewing = false;
 
   // 효과음 (Web Audio API로 직접 생성)
   let audioCtx;
@@ -233,9 +270,20 @@
   function rand(min, max) { return Math.floor(Math.random() * (max - min + 1)) + min; }
 
   function newProblem() {
-    let nn, mm;
-    do { nn = rand(2, 9); mm = rand(1, 9); } while (nn === n && mm === m); // 같은 문제 연속 방지
-    n = nn; m = mm;
+    reviewing = reviewQueue.length > 0;
+    const badge = $('reviewBadge');
+    if (reviewing) {
+      // 틀린 문제 다시 풀기
+      [n, m] = reviewQueue.shift();
+      badge.textContent = `🔁 틀린 문제 다시 풀기 ${reviewTotal - reviewQueue.length} / ${reviewTotal}`;
+      badge.hidden = false;
+    } else {
+      badge.hidden = true;
+      let nn, mm;
+      const dan = parseInt($('danSelect').value, 10);  // 0이면 전체
+      do { nn = dan || rand(2, 9); mm = rand(1, 9); } while (nn === n && mm === m); // 같은 문제 연속 방지
+      n = nn; m = mm;
+    }
     $('n').textContent = n;
     $('m').textContent = m;
     d1.value = d2.value = '';
@@ -277,15 +325,30 @@
     clearInterval(timerId);
     d1.disabled = d2.disabled = true;
 
-    if (correct) { okCount++; playDingDong(); } else { badCount++; playBeep(); }
-    const total = okCount + badCount;
-    $('okCount').textContent = okCount;
-    $('badCount').textContent = badCount;
-    $('totalCount').textContent = total;
+    if (correct) playDingDong(); else playBeep();
 
-    // 20문제마다 빵빠레
-    const milestone = total % 20 === 0;
-    if (milestone) playFanfare(0.9);
+    // 다시 풀기 문제는 점수와 20문제 카운트에 넣지 않음
+    let total = okCount + badCount, milestone = false;
+    if (!reviewing) {
+      if (correct) okCount++;
+      else {
+        badCount++;
+        if (!wrongList.some(([a, b]) => a === n && b === m)) wrongList.push([n, m]);
+      }
+      total = okCount + badCount;
+      $('okCount').textContent = okCount;
+      $('badCount').textContent = badCount;
+      $('totalCount').textContent = total;
+
+      // 20문제마다 빵빠레 + 틀린 문제 다시 풀기 준비
+      milestone = total % 20 === 0;
+      if (milestone) {
+        playFanfare(0.9);
+        reviewQueue = wrongList;
+        reviewTotal = wrongList.length;
+        wrongList = [];
+      }
+    }
 
     const sym = $('markSymbol');
     sym.textContent = correct ? 'O' : 'X';
@@ -293,6 +356,7 @@
     const msgs = [];
     if (!correct) msgs.push(`${reason} 정답: ${n} × ${m} = ${n * m}`);
     if (milestone) msgs.push(`🎉 ${total}문제 돌파! 🎉`);
+    if (milestone && reviewTotal) msgs.push(`틀린 문제 ${reviewTotal}개를 다시 풀어봐요!`);
     $('markMsg').innerHTML = msgs.join('<br>');
     $('mark').classList.add('show');
 
@@ -318,6 +382,8 @@
     });
   });
   $('submitBtn').addEventListener('click', check);
+  // 단을 바꾸면 바로 새 문제 (O/X 표시 중이면 끝난 뒤 자동으로 반영됨)
+  $('danSelect').addEventListener('change', () => { if (!locked && !reviewing) newProblem(); });
 
   // 브라우저는 사용자가 한 번 조작해야 소리를 허용하므로, 첫 입력 때 오디오를 미리 켜 둠
   ['keydown', 'pointerdown'].forEach(ev =>
