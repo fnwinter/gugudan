@@ -1,0 +1,471 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>영단어 카드 맞추기</title>
+<style>
+  :root {
+    --bg: #fdf8ee;
+    --ink: #2b2b2b;
+    --accent: #3b82f6;
+    --ok: #16a34a;
+    --bad: #dc2626;
+    --card: #ea580c;
+    --word: #3b82f6;
+    --mean: #db2777;
+    --box: #ffffff;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; min-height: 100%; }
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: "Segoe UI", "Malgun Gothic", sans-serif;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    user-select: none;
+  }
+
+  .top {
+    width: 100%;
+    max-width: 1000px;
+    padding: 20px 16px 0;
+  }
+  .top-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+    font-size: clamp(20px, 4vw, 32px);
+    font-weight: 700;
+  }
+  .home {
+    display: inline-block;
+    font-size: clamp(16px, 3vw, 22px);
+    font-weight: 700;
+    padding: 8px 16px;
+    border-radius: 12px;
+    background: #e5e7eb;
+    color: var(--ink);
+    text-decoration: none;
+    white-space: nowrap;
+  }
+  .home:active { transform: scale(.97); }
+
+  main {
+    width: 100%;
+    max-width: 1000px;
+    padding: 20px 16px 40px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 20px;
+  }
+  .hint { font-size: clamp(16px, 3vw, 22px); color: #6b7280; text-align: center; }
+
+  /* 카드 */
+  #board {
+    width: 100%;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 14px;
+  }
+  .card {
+    aspect-ratio: 3 / 4;
+    perspective: 800px;
+    background: none;
+    border: none;
+    padding: 0;
+    cursor: pointer;
+    font-family: inherit;
+  }
+  .card:disabled { cursor: default; }
+  .inner {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    transition: transform .4s;
+    transform-style: preserve-3d;
+  }
+  .card.open .inner { transform: rotateY(180deg); }
+  .face {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 8px;
+    border-radius: 16px;
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+    box-shadow: 0 5px 0 rgba(0, 0, 0, 0.15);
+    text-align: center;
+    word-break: keep-all;
+    overflow-wrap: anywhere;
+  }
+  /* 뒷면: 영단어 카드는 파랑 A, 뜻 카드는 분홍 가 */
+  .back {
+    color: #fff;
+    font-size: clamp(40px, 9vw, 64px);
+    font-weight: 900;
+  }
+  .card.word .back { background: var(--word); }
+  .card.mean .back { background: var(--mean); }
+  .front {
+    transform: rotateY(180deg);
+    background: var(--box);
+    font-size: clamp(18px, 3.6vw, 28px);
+    font-weight: 800;
+    border: 5px solid;
+  }
+  .card.word .front { border-color: var(--word); color: var(--word); }
+  .card.mean .front { border-color: var(--mean); color: var(--mean); }
+  .card.done .front { border-color: var(--ok); background: #dcfce7; }
+  .card:not(:disabled):hover .inner { transform: translateY(-4px); }
+  .card.open:not(:disabled):hover .inner { transform: rotateY(180deg); }
+
+  button.btn {
+    font-size: clamp(16px, 3vw, 22px);
+    font-weight: 700;
+    font-family: inherit;
+    padding: 8px 20px;
+    border: none;
+    border-radius: 12px;
+    background: var(--accent);
+    color: #fff;
+    cursor: pointer;
+  }
+  button.btn:active { transform: scale(.97); }
+  button.sub { background: #6b7280; }
+  #againBtn { font-size: clamp(22px, 4vw, 32px); padding: 14px 40px; }
+
+  /* O / X 표시 */
+  #mark {
+    position: fixed;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity .15s;
+  }
+  #mark.show { opacity: 1; }
+  #markSymbol {
+    font-size: clamp(220px, 50vw, 520px);
+    font-weight: 900;
+    line-height: 1;
+    text-shadow: 0 6px 24px rgba(0,0,0,.15);
+  }
+  #markSymbol.ok { color: var(--ok); }
+  #markSymbol.bad { color: var(--bad); }
+  #markSymbol.win { font-size: clamp(120px, 30vw, 300px); }
+  #markMsg {
+    font-size: clamp(24px, 5vw, 44px);
+    font-weight: 700;
+    background: rgba(255,255,255,.9);
+    padding: 8px 24px;
+    border-radius: 12px;
+    text-align: center;
+  }
+  #markMsg:empty { display: none; }
+
+  /* 문제 입력 창 */
+  #editor {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,.45);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+  }
+  #editor.show { display: flex; }
+  .panel {
+    background: var(--box);
+    border-radius: 18px;
+    padding: 24px;
+    width: min(100%, 700px);
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+  .panel h2 { margin: 0; font-size: clamp(22px, 4vw, 30px); }
+  #wordList {
+    width: 100%;
+    height: 50vh;
+    font-size: 20px;
+    font-family: inherit;
+    padding: 12px;
+    border: 3px solid #9ca3af;
+    border-radius: 12px;
+    resize: vertical;
+  }
+  #wordList:focus { outline: none; border-color: var(--accent); }
+  #editorError { color: var(--bad); font-weight: 700; min-height: 1.2em; }
+  .panel-btns { display: flex; gap: 12px; justify-content: flex-end; }
+</style>
+</head>
+<body>
+  <div class="top">
+    <div class="top-row">
+      <a class="home" href="index.html">🏠 처음으로</a>
+      <span>🃏 <span id="pairText">0 / 0</span> &nbsp; ⭕ <span id="okCount">0</span> &nbsp; ❌ <span id="badCount">0</span></span>
+      <span>
+        <button id="newBtn" class="btn">🔀 새 게임</button>
+        <button id="editBtn" class="btn sub">문제</button>
+      </span>
+    </div>
+  </div>
+
+  <main>
+    <div class="hint">파란 <b>A</b> 카드(영단어)와 분홍 <b>가</b> 카드(뜻)를 하나씩 뒤집어 짝을 맞춰요!</div>
+    <div id="board"></div>
+    <button id="againBtn" class="btn" hidden>🔀 다시 하기</button>
+  </main>
+
+  <div id="mark"><div id="markSymbol"></div><div id="markMsg"></div></div>
+
+  <div id="editor">
+    <div class="panel">
+      <h2>문제 입력</h2>
+      <div class="hint" style="text-align:left">한 줄에 하나씩 <b>spelling,뜻</b> 형식으로 적어 주세요. (영단어 연습과 같은 목록을 써요)</div>
+      <textarea id="wordList" spellcheck="false" placeholder="apple,사과&#10;banana,바나나&#10;school,학교"></textarea>
+      <div id="editorError"></div>
+      <div class="panel-btns">
+        <button id="cancelBtn" class="btn sub">취소</button>
+        <button id="saveBtn" class="btn">저장</button>
+      </div>
+    </div>
+  </div>
+
+<script>
+  const MAX_PAIRS = 8;        // 한 게임에 나오는 짝 수
+  const SHOW_DELAY = 1200;    // O/X 보여주는 시간(ms)
+  const STORAGE_KEY = 'english-words';  // 영단어 연습과 같은 목록
+
+  const $ = id => document.getElementById(id);
+  let words = [], cards = [], picked = { word: null, mean: null };
+  let okCount = 0, badCount = 0, matched = 0, locked = false, markId;
+
+  // ===== 소리 =====
+  let audioCtx;
+  function getAudio() {
+    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+    return audioCtx;
+  }
+  function tone(freq, start, dur, type, vol) {
+    const ctx = getAudio();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = type;
+    osc.frequency.value = freq;
+    const t = ctx.currentTime + start;
+    gain.gain.setValueAtTime(0, t);
+    gain.gain.linearRampToValueAtTime(vol, t + 0.01);
+    gain.gain.exponentialRampToValueAtTime(0.001, t + dur);
+    osc.connect(gain).connect(ctx.destination);
+    osc.start(t);
+    osc.stop(t + dur);
+  }
+  function playFlip() {               // 착
+    tone(600, 0, 0.08, 'triangle', 0.2);
+  }
+  function playDingDong() {           // 띵(높은음) → 동(낮은음)
+    tone(1046.5, 0, 0.6, 'sine', 0.5);   // C6
+    tone(784, 0.35, 0.9, 'sine', 0.5);   // G5
+  }
+  function playBeep() {               // 삑-
+    tone(220, 0, 0.5, 'square', 0.25);
+  }
+  function playFanfare(delay) {       // 빠-빠-빠-빠밤!
+    const notes = [
+      [523.25, 0.00, 0.15], [523.25, 0.16, 0.15], [523.25, 0.32, 0.15],  // C5 C5 C5
+      [659.25, 0.48, 0.30], [587.33, 0.80, 0.15], [659.25, 0.96, 0.15],  // E5 D5 E5
+      [783.99, 1.12, 0.90],                                              // G5 ~
+    ];
+    notes.forEach(([f, s, d]) => {
+      tone(f, delay + s, d + 0.1, 'triangle', 0.35);
+      tone(f * 2, delay + s, d + 0.1, 'sawtooth', 0.06);  // 금관 느낌 배음
+    });
+    // 마지막 화음
+    tone(523.25, delay + 1.12, 1.0, 'triangle', 0.2);
+    tone(659.25, delay + 1.12, 1.0, 'triangle', 0.2);
+  }
+
+  function shuffle(arr) {
+    for (let i = arr.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+    return arr;
+  }
+
+  // ===== 단어 목록 =====
+  // "spelling,뜻" 줄들을 단어 목록으로 변환 (뜻 안의 쉼표는 그대로 둠)
+  function parseWords(text) {
+    const list = [], bad = [];
+    text.split('\n').forEach((line, i) => {
+      line = line.trim();
+      if (!line) return;
+      const at = line.indexOf(',');
+      const spelling = at < 0 ? '' : line.slice(0, at).trim();
+      const meaning = at < 0 ? '' : line.slice(at + 1).trim();
+      if (spelling && meaning) list.push({ spelling, meaning });
+      else bad.push(i + 1);
+    });
+    return { list, bad };
+  }
+  function wordsToText(list) { return list.map(w => `${w.spelling},${w.meaning}`).join('\n'); }
+
+  function loadWords() {
+    try { words = JSON.parse(localStorage.getItem(STORAGE_KEY)) || []; } catch { words = []; }
+    if (!Array.isArray(words)) words = [];
+  }
+  function saveWords() {
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(words)); } catch {}
+  }
+
+  // ===== 게임 =====
+  function showMark(cls, symbol, msg, ms) {
+    const sym = $('markSymbol');
+    sym.className = cls;
+    sym.textContent = symbol;
+    $('markMsg').textContent = msg;
+    clearTimeout(markId);
+    $('mark').classList.add('show');
+    markId = setTimeout(() => $('mark').classList.remove('show'), ms);
+  }
+
+  function updateScore() {
+    $('pairText').textContent = `${matched} / ${cards.length / 2}`;
+    $('okCount').textContent = okCount;
+    $('badCount').textContent = badCount;
+  }
+
+  function newGame() {
+    if (words.length === 0) { openEditor(); return; }
+    clearTimeout(markId);
+    $('mark').classList.remove('show');
+    // 뜻이 같은 단어가 겹치지 않게 골라서 섞기
+    const seen = new Set(), pool = [];
+    shuffle(words.slice()).forEach(w => {
+      if (pool.length < MAX_PAIRS && !seen.has(w.meaning)) { seen.add(w.meaning); pool.push(w); }
+    });
+    cards = shuffle(pool.flatMap((w, id) => [
+      { id, type: 'word', text: w.spelling },
+      { id, type: 'mean', text: w.meaning },
+    ]));
+    picked = { word: null, mean: null };
+    okCount = badCount = matched = 0;
+    locked = false;
+    $('againBtn').hidden = true;
+    renderBoard();
+    updateScore();
+  }
+
+  function renderBoard() {
+    const board = $('board');
+    board.innerHTML = '';
+    cards.forEach(c => {
+      const btn = document.createElement('button');
+      btn.className = `card ${c.type}`;
+      btn.setAttribute('aria-label', c.type === 'word' ? '영단어 카드' : '뜻 카드');
+      btn.innerHTML = '<div class="inner"><div class="face back"></div><div class="face front"></div></div>';
+      btn.querySelector('.back').textContent = c.type === 'word' ? 'A' : '가';
+      btn.querySelector('.front').textContent = c.text;
+      btn.addEventListener('click', () => flip(c));
+      c.el = btn;
+      board.append(btn);
+    });
+  }
+
+  function setOpen(c, open) {
+    c.el.classList.toggle('open', open);
+    c.el.setAttribute('aria-label', open ? c.text : (c.type === 'word' ? '영단어 카드' : '뜻 카드'));
+  }
+
+  function flip(c) {
+    if (locked || c.done || picked[c.type] === c) return;
+    getAudio();
+    // 같은 종류 카드를 또 누르면 앞에 뒤집은 카드는 다시 덮고 새 카드로 바꿈
+    if (picked[c.type]) setOpen(picked[c.type], false);
+    picked[c.type] = c;
+    setOpen(c, true);
+    playFlip();
+    if (picked.word && picked.mean) setTimeout(judge, 450);  // 뒤집히는 모습 보고 판정
+  }
+
+  function judge() {
+    const { word, mean } = picked;
+    if (!word || !mean) return;  // 판정 전에 새 게임을 시작한 경우
+    picked = { word: null, mean: null };
+    if (word.id === mean.id) {
+      okCount++;
+      matched++;
+      [word, mean].forEach(c => { c.done = true; c.el.classList.add('done'); c.el.disabled = true; });
+      updateScore();
+      if (matched === cards.length / 2) { win(); return; }
+      playDingDong();
+      showMark('ok', 'O', '', SHOW_DELAY);
+    } else {
+      badCount++;
+      updateScore();
+      playBeep();
+      showMark('bad', 'X', '', SHOW_DELAY);
+      locked = true;
+      setTimeout(() => {
+        setOpen(word, false);
+        setOpen(mean, false);
+        locked = false;
+      }, SHOW_DELAY);
+    }
+  }
+
+  function win() {
+    playDingDong();
+    playFanfare(0.8);
+    showMark('win', '🎉', `짜잔! 다 맞췄어요! (⭕ ${okCount} ❌ ${badCount})`, 3500);
+    $('againBtn').hidden = false;
+  }
+
+  // ===== 문제 입력 창 =====
+  function openEditor() {
+    $('wordList').value = wordsToText(words);
+    $('editorError').textContent = '';
+    $('cancelBtn').style.display = words.length ? '' : 'none';
+    $('editor').classList.add('show');
+    $('wordList').focus();
+  }
+  function closeEditor() { $('editor').classList.remove('show'); }
+
+  $('editBtn').addEventListener('click', openEditor);
+  $('cancelBtn').addEventListener('click', closeEditor);
+  $('saveBtn').addEventListener('click', () => {
+    const { list, bad } = parseWords($('wordList').value);
+    if (bad.length) {
+      $('editorError').textContent = `${bad.join(', ')}번째 줄을 "spelling,뜻" 형식으로 고쳐 주세요.`;
+      return;
+    }
+    if (list.length < 2) {
+      $('editorError').textContent = '문제를 두 개 이상 입력해 주세요.';
+      return;
+    }
+    words = list;
+    saveWords();
+    closeEditor();
+    newGame();
+  });
+  $('newBtn').addEventListener('click', newGame);
+  $('againBtn').addEventListener('click', newGame);
+
+  loadWords();
+  newGame();
+</script>
+</body>
+</html>

@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>할 일 목록</title>
+<style>
+  :root {
+    --bg: #fdf8ee;
+    --ink: #2b2b2b;
+    --accent: #3b82f6;
+    --ok: #16a34a;
+    --bad: #dc2626;
+    --todo: #db2777;
+    --box: #ffffff;
+    --muted: #9ca3af;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; min-height: 100%; }
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: "Segoe UI", "Malgun Gothic", sans-serif;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 20px 16px 40px;
+  }
+
+  .top {
+    width: 100%;
+    max-width: 800px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+    font-size: clamp(20px, 4vw, 32px);
+    font-weight: 700;
+  }
+  .home {
+    display: inline-block;
+    font-size: clamp(16px, 3vw, 22px);
+    font-weight: 700;
+    padding: 8px 16px;
+    border-radius: 12px;
+    background: #e5e7eb;
+    color: var(--ink);
+    text-decoration: none;
+    white-space: nowrap;
+  }
+  .home:active { transform: scale(.97); }
+  #progress { font-variant-numeric: tabular-nums; }
+
+  h1 {
+    font-size: clamp(32px, 7vw, 56px);
+    margin: 24px 0;
+  }
+
+  /* 할 일 추가 */
+  .add {
+    width: 100%;
+    max-width: 800px;
+    display: flex;
+    gap: 12px;
+    margin-bottom: 24px;
+  }
+  #newText {
+    flex: 1;
+    min-width: 0;
+    font-size: clamp(20px, 4vw, 32px);
+    font-family: inherit;
+    padding: 12px 16px;
+    border: 4px solid var(--todo);
+    border-radius: 16px;
+    background: var(--box);
+    color: var(--ink);
+    outline: none;
+  }
+  #addBtn {
+    font-size: clamp(20px, 4vw, 32px);
+    font-weight: 700;
+    font-family: inherit;
+    padding: 12px 20px;
+    border: none;
+    border-radius: 16px;
+    background: var(--todo);
+    color: #fff;
+    cursor: pointer;
+    white-space: nowrap;
+    box-shadow: 0 5px 0 rgba(0, 0, 0, 0.15);
+  }
+  #addBtn:active { transform: translateY(3px); box-shadow: 0 2px 0 rgba(0, 0, 0, 0.15); }
+
+  /* 목록 */
+  #list {
+    width: 100%;
+    max-width: 800px;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  #list li {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: var(--box);
+    border-radius: 16px;
+    padding: 12px 16px;
+    box-shadow: 0 4px 0 rgba(0, 0, 0, 0.08);
+  }
+  .item {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+    font-size: clamp(22px, 5vw, 36px);
+    font-weight: 700;
+    font-family: inherit;
+    text-align: left;
+    background: none;
+    border: none;
+    color: var(--ink);
+    cursor: pointer;
+    padding: 4px 0;
+  }
+  .box {
+    font-family: Consolas, "Courier New", monospace;
+    color: var(--todo);
+    white-space: nowrap;
+  }
+  .text { overflow-wrap: anywhere; }
+  li.done .box { color: var(--ok); }
+  li.done .text { color: var(--muted); text-decoration: line-through; }
+  .del {
+    font-size: clamp(18px, 3.5vw, 26px);
+    background: #e5e7eb;
+    border: none;
+    border-radius: 12px;
+    padding: 6px 12px;
+    cursor: pointer;
+  }
+  #empty {
+    font-size: clamp(18px, 3.5vw, 26px);
+    color: var(--muted);
+    text-align: center;
+    margin-top: 24px;
+  }
+
+  /* 짜잔! */
+  #mark {
+    position: fixed;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity .2s;
+  }
+  #mark.show { opacity: 1; }
+  #markSymbol {
+    font-size: clamp(120px, 30vw, 300px);
+    line-height: 1;
+  }
+  #markMsg {
+    font-size: clamp(36px, 9vw, 80px);
+    font-weight: 800;
+    color: var(--todo);
+    background: rgba(255, 255, 255, 0.9);
+    padding: 8px 32px;
+    border-radius: 24px;
+    text-align: center;
+  }
+  #mark.show #markSymbol { animation: pop .5s ease-out; }
+  @keyframes pop {
+    0% { transform: scale(.3) rotate(-20deg); }
+    70% { transform: scale(1.15) rotate(8deg); }
+    100% { transform: scale(1) rotate(0); }
+  }
+</style>
+</head>
+<body>
+  <div class="top">
+    <a class="home" href="index.html">🏠 처음으로</a>
+    <span id="progress"></span>
+  </div>
+
+  <h1>📝 오늘 할 일</h1>
+
+  <form class="add" id="addForm">
+    <input id="newText" type="text" placeholder="예: 일기 쓰기" autocomplete="off" aria-label="할 일">
+    <button id="addBtn" type="submit">➕ 추가</button>
+  </form>
+
+  <ul id="list"></ul>
+  <div id="empty">할 일을 적고 ➕ 추가 버튼을 눌러요</div>
+
+  <div id="mark"><div id="markSymbol">🎉</div><div id="markMsg"></div></div>
+
+<script>
+  const STORE_KEY = 'todoList';
+  const $ = id => document.getElementById(id);
+  let todos = [];   // { text, done }
+  let markId;
+
+  // ===== 소리 =====
+  let audioCtx;
+  function getAudio() {
+    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+    return audioCtx;
+  }
+  function tone(freq, start, dur, type, vol) {
+    const ctx = getAudio();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = type;
+    osc.frequency.value = freq;
+    const t = ctx.currentTime + start;
+    gain.gain.setValueAtTime(0, t);
+    gain.gain.linearRampToValueAtTime(vol, t + 0.01);
+    gain.gain.exponentialRampToValueAtTime(0.001, t + dur);
+    osc.connect(gain).connect(ctx.destination);
+    osc.start(t);
+    osc.stop(t + dur);
+  }
+  function playFanfare(delay) {       // 빠-빠-빠-빠밤!
+    const notes = [
+      [523.25, 0.00, 0.15], [523.25, 0.16, 0.15], [523.25, 0.32, 0.15],  // C5 C5 C5
+      [659.25, 0.48, 0.30], [587.33, 0.80, 0.15], [659.25, 0.96, 0.15],  // E5 D5 E5
+      [783.99, 1.12, 0.90],                                              // G5 ~
+    ];
+    notes.forEach(([f, s, d]) => {
+      tone(f, delay + s, d + 0.1, 'triangle', 0.35);
+      tone(f * 2, delay + s, d + 0.1, 'sawtooth', 0.06);  // 금관 느낌 배음
+    });
+    // 마지막 화음
+    tone(523.25, delay + 1.12, 1.0, 'triangle', 0.2);
+    tone(659.25, delay + 1.12, 1.0, 'triangle', 0.2);
+  }
+  function playTada(delay) {          // 짜~잔! (반짝 올라가는 소리 + 큰 화음)
+    [1046.5, 1318.5, 1568, 2093].forEach((f, i) => tone(f, delay + i * 0.06, 0.3, 'sine', 0.25));
+    [523.25, 659.25, 783.99, 1046.5].forEach(f => {
+      tone(f, delay + 0.35, 1.2, 'triangle', 0.25);
+      tone(f * 2, delay + 0.35, 0.8, 'sine', 0.08);
+    });
+  }
+
+  // ===== 저장 =====
+  function save() { try { localStorage.setItem(STORE_KEY, JSON.stringify(todos)); } catch {} }
+  function loadTodos() {
+    try {
+      const list = JSON.parse(localStorage.getItem(STORE_KEY));
+      if (Array.isArray(list)) todos = list.filter(t => t && typeof t.text === 'string');
+    } catch {}
+  }
+
+  // ===== 화면 =====
+  function render() {
+    const ul = $('list');
+    ul.innerHTML = '';
+    todos.forEach((t, i) => {
+      const li = document.createElement('li');
+      li.classList.toggle('done', t.done);
+
+      const item = document.createElement('button');
+      item.className = 'item';
+      item.type = 'button';
+      item.setAttribute('aria-pressed', t.done);
+      const box = document.createElement('span');
+      box.className = 'box';
+      box.textContent = t.done ? '[V]' : '[ ]';
+      const text = document.createElement('span');
+      text.className = 'text';
+      text.textContent = t.text;
+      item.append(box, text);
+      item.addEventListener('click', () => toggle(i));
+
+      const del = document.createElement('button');
+      del.className = 'del';
+      del.type = 'button';
+      del.textContent = '🗑️';
+      del.setAttribute('aria-label', `${t.text} 지우기`);
+      del.addEventListener('click', () => remove(i));
+
+      li.append(item, del);
+      ul.append(li);
+    });
+    const doneCount = todos.filter(t => t.done).length;
+    $('progress').textContent = todos.length ? `✅ ${doneCount} / ${todos.length}` : '';
+    $('empty').hidden = todos.length > 0;
+  }
+
+  function celebrate(allDone) {
+    playFanfare(0);
+    playTada(1.5);
+    $('markSymbol').textContent = allDone ? '🏆' : '🎉';
+    $('markMsg').textContent = allDone ? '짜잔! 다 끝냈어요!' : '짜잔! 잘했어요!';
+    clearTimeout(markId);
+    const mark = $('mark');
+    mark.classList.remove('show');
+    void mark.offsetWidth;  // 애니메이션 다시 시작
+    mark.classList.add('show');
+    markId = setTimeout(() => mark.classList.remove('show'), 3000);
+  }
+
+  function toggle(i) {
+    todos[i].done = !todos[i].done;
+    save();
+    render();
+    if (todos[i].done) celebrate(todos.every(t => t.done));
+  }
+
+  function remove(i) {
+    todos.splice(i, 1);
+    save();
+    render();
+  }
+
+  $('addForm').addEventListener('submit', e => {
+    e.preventDefault();
+    const text = $('newText').value.trim();
+    if (!text) { $('newText').focus(); return; }
+    todos.push({ text, done: false });
+    save();
+    render();
+    $('newText').value = '';
+    $('newText').focus();
+  });
+
+  loadTodos();
+  render();
+  $('newText').focus();
+</script>
+</body>
+</html>

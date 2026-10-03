@@ -14,6 +14,9 @@
     --hanja: #b91c1c;
     --typing: #7c3aed;
     --typing-en: #0891b2;
+    --todo: #db2777;
+    --card: #ea580c;
+    --timer: #e11d48;
     --box: #ffffff;
   }
   * { box-sizing: border-box; }
@@ -62,6 +65,9 @@
   .card.hanja { border-color: var(--hanja); }
   .card.typing { border-color: var(--typing); }
   .card.typing-en { border-color: var(--typing-en); }
+  .card.todo { border-color: var(--todo); }
+  .card.cardgame { border-color: var(--card); }
+  .card.timer { border-color: var(--timer); }
 
   .icon {
     font-size: clamp(56px, 12vw, 88px);
@@ -100,6 +106,18 @@
     <a class="card typing-en" href="keyboard_english.html">
       <div class="icon">🅰️</div>
       <div class="name">영어 타자</div>
+    </a>
+    <a class="card cardgame" href="card_game.html">
+      <div class="icon">🃏</div>
+      <div class="name">카드 맞추기</div>
+    </a>
+    <a class="card timer" href="pomodoro.html">
+      <div class="icon">🍅</div>
+      <div class="name">뽀모도로</div>
+    </a>
+    <a class="card todo" href="to_do_list.html">
+      <div class="icon">📝</div>
+      <div class="name">할 일 목록</div>
     </a>
   </div>
 </body>
