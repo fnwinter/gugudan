@@ -281,7 +281,7 @@
     $('markMsg').innerHTML = msgs.join('<br>');
     $('mark').classList.add('show');
 
-    let delay = correct ? NEXT_DELAY : NEXT_DELAY + 1000;
+    let delay = correct ? NEXT_DELAY : 5000;
     if (milestone) delay = Math.max(delay, 3000);  // 빵빠레 끝날 때까지 대기
     setTimeout(() => {
       $('mark').classList.remove('show');
