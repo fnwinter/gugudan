@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>구구단 연습</title>
+<style>
+  :root {
+    --bg: #fdf8ee;
+    --ink: #2b2b2b;
+    --accent: #3b82f6;
+    --ok: #16a34a;
+    --bad: #dc2626;
+    --warn: #f59e0b;
+    --box: #ffffff;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; }
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: "Segoe UI", "Malgun Gothic", sans-serif;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    user-select: none;
+  }
+
+  /* 상단 타이머 */
+  .top {
+    width: 100%;
+    max-width: 900px;
+    padding: 20px 16px 0;
+  }
+  .top-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    font-size: clamp(20px, 4vw, 32px);
+    font-weight: 700;
+    margin-bottom: 10px;
+  }
+  #timeText { font-variant-numeric: tabular-nums; }
+  .bar {
+    height: 22px;
+    background: #e5e7eb;
+    border-radius: 11px;
+    overflow: hidden;
+  }
+  #barFill {
+    height: 100%;
+    width: 100%;
+    background: var(--accent);
+    transition: width 0.1s linear, background 0.3s;
+  }
+
+  /* 가운데 문제 */
+  main {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 30px;
+    width: 100%;
+    padding: 16px;
+  }
+  .problem {
+    display: flex;
+    align-items: center;
+    gap: clamp(8px, 2vw, 24px);
+    font-size: clamp(56px, 13vw, 150px);
+    font-weight: 800;
+    line-height: 1;
+  }
+  .digits { display: flex; gap: clamp(6px, 1.5vw, 16px); }
+  .digit {
+    width: 1.1em;
+    height: 1.3em;
+    font-size: inherit;
+    font-weight: 800;
+    font-family: inherit;
+    text-align: center;
+    color: var(--accent);
+    background: var(--box);
+    border: 6px solid #9ca3af;
+    border-radius: 18px;
+    outline: none;
+    padding: 0;
+    caret-color: transparent;
+  }
+  .digit:focus { border-color: var(--accent); box-shadow: 0 0 0 6px rgba(59,130,246,.2); }
+  .digit:disabled { color: var(--ink); }
+
+  .hint { font-size: clamp(16px, 3vw, 22px); color: #6b7280; text-align: center; }
+  button {
+    font-size: clamp(22px, 4vw, 32px);
+    font-weight: 700;
+    padding: 14px 40px;
+    border: none;
+    border-radius: 14px;
+    background: var(--accent);
+    color: #fff;
+    cursor: pointer;
+  }
+  button:active { transform: scale(.97); }
+
+  /* O / X 표시 */
+  #mark {
+    position: fixed;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity .15s;
+  }
+  #mark.show { opacity: 1; }
+  #markSymbol {
+    font-size: clamp(220px, 50vw, 520px);
+    font-weight: 900;
+    line-height: 1;
+    text-shadow: 0 6px 24px rgba(0,0,0,.15);
+  }
+  #markSymbol.ok { color: var(--ok); }
+  #markSymbol.bad { color: var(--bad); }
+  #markMsg {
+    font-size: clamp(24px, 5vw, 44px);
+    font-weight: 700;
+    background: rgba(255,255,255,.9);
+    padding: 8px 24px;
+    border-radius: 12px;
+    text-align: center;
+  }
+  #markMsg:empty { display: none; }
+</style>
+</head>
+<body>
+  <div class="top">
+    <div class="top-row">
+      <span>⏰ <span id="timeText">30</span>초</span>
+      <span>📝 <span id="totalCount">0</span>문제 &nbsp; ⭕ <span id="okCount">0</span> &nbsp; ❌ <span id="badCount">0</span></span>
+    </div>
+    <div class="bar"><div id="barFill"></div></div>
+  </div>
+
+  <main>
+    <div class="problem">
+      <span id="n">2</span>
+      <span>×</span>
+      <span id="m">3</span>
+      <span>=</span>
+      <div class="digits">
+        <input class="digit" id="d1" inputmode="numeric" maxlength="1" autocomplete="off">
+        <input class="digit" id="d2" inputmode="numeric" maxlength="1" autocomplete="off">
+      </div>
+    </div>
+    <button id="submitBtn">확인</button>
+    <div class="hint">답을 입력하고 Enter! (한 자리 답은 숫자 하나만 넣어도 돼요)</div>
+  </main>
+
+  <div id="mark"><div id="markSymbol"></div><div id="markMsg"></div></div>
+
+<script>
+  const TIME_LIMIT = 30;     // 초
+  const NEXT_DELAY = 1500;   // O/X 보여주는 시간(ms)
+
+  const $ = id => document.getElementById(id);
+  const d1 = $('d1'), d2 = $('d2');
+  let n, m, deadline, timerId, locked = false;
+  let okCount = 0, badCount = 0;
+
+  // 효과음 (Web Audio API로 직접 생성)
+  let audioCtx;
+  function getAudio() {
+    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+    return audioCtx;
+  }
+  function tone(freq, start, dur, type, vol) {
+    const ctx = getAudio();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = type;
+    osc.frequency.value = freq;
+    const t = ctx.currentTime + start;
+    gain.gain.setValueAtTime(0, t);
+    gain.gain.linearRampToValueAtTime(vol, t + 0.01);
+    gain.gain.exponentialRampToValueAtTime(0.001, t + dur);
+    osc.connect(gain).connect(ctx.destination);
+    osc.start(t);
+    osc.stop(t + dur);
+  }
+  function playDingDong() {           // 띵(높은음) → 동(낮은음)
+    tone(1046.5, 0, 0.6, 'sine', 0.5);   // C6
+    tone(784, 0.35, 0.9, 'sine', 0.5);   // G5
+  }
+  function playBeep() {               // 삑-
+    tone(220, 0, 0.5, 'square', 0.25);
+  }
+  function playFanfare(delay) {       // 빠-빠-빠-빠밤!
+    const notes = [
+      [523.25, 0.00, 0.15], [523.25, 0.16, 0.15], [523.25, 0.32, 0.15],  // C5 C5 C5
+      [659.25, 0.48, 0.30], [587.33, 0.80, 0.15], [659.25, 0.96, 0.15],  // E5 D5 E5
+      [783.99, 1.12, 0.90],                                              // G5 ~
+    ];
+    notes.forEach(([f, s, d]) => {
+      tone(f, delay + s, d + 0.1, 'triangle', 0.35);
+      tone(f * 2, delay + s, d + 0.1, 'sawtooth', 0.06);  // 금관 느낌 배음
+    });
+    // 마지막 화음
+    tone(523.25, delay + 1.12, 1.0, 'triangle', 0.2);
+    tone(659.25, delay + 1.12, 1.0, 'triangle', 0.2);
+  }
+
+  function rand(min, max) { return Math.floor(Math.random() * (max - min + 1)) + min; }
+
+  function newProblem() {
+    let nn, mm;
+    do { nn = rand(2, 9); mm = rand(1, 9); } while (nn === n && mm === m); // 같은 문제 연속 방지
+    n = nn; m = mm;
+    $('n').textContent = n;
+    $('m').textContent = m;
+    d1.value = d2.value = '';
+    d1.disabled = d2.disabled = false;
+    locked = false;
+    d1.focus();
+    startTimer();
+  }
+
+  function startTimer() {
+    clearInterval(timerId);
+    deadline = Date.now() + TIME_LIMIT * 1000;
+    tick();
+    timerId = setInterval(tick, 100);
+  }
+
+  function tick() {
+    const left = Math.max(0, deadline - Date.now());
+    const ratio = left / (TIME_LIMIT * 1000);
+    $('timeText').textContent = Math.ceil(left / 1000);
+    const bar = $('barFill');
+    bar.style.width = (ratio * 100) + '%';
+    bar.style.background = ratio > 0.5 ? 'var(--accent)' : ratio > 0.2 ? 'var(--warn)' : 'var(--bad)';
+    if (left <= 0) finish(false, '시간 초과!');
+  }
+
+  function check() {
+    if (locked) return;
+    // 한 자리 답은 숫자 하나만 넣어도 됨 (앞칸이든 뒷칸이든)
+    const typed = d1.value + d2.value;
+    if (typed === '') { d1.focus(); return; }
+    const answer = parseInt(typed, 10);
+    finish(answer === n * m, '');
+  }
+
+  function finish(correct, reason) {
+    if (locked) return;
+    locked = true;
+    clearInterval(timerId);
+    d1.disabled = d2.disabled = true;
+
+    if (correct) { okCount++; playDingDong(); } else { badCount++; playBeep(); }
+    const total = okCount + badCount;
+    $('okCount').textContent = okCount;
+    $('badCount').textContent = badCount;
+    $('totalCount').textContent = total;
+
+    // 20문제마다 빵빠레
+    const milestone = total % 20 === 0;
+    if (milestone) playFanfare(0.9);
+
+    const sym = $('markSymbol');
+    sym.textContent = correct ? 'O' : 'X';
+    sym.className = correct ? 'ok' : 'bad';
+    const msgs = [];
+    if (!correct) msgs.push(`${reason} 정답: ${n} × ${m} = ${n * m}`);
+    if (milestone) msgs.push(`🎉 ${total}문제 돌파! 🎉`);
+    $('markMsg').innerHTML = msgs.join('<br>');
+    $('mark').classList.add('show');
+
+    let delay = correct ? NEXT_DELAY : NEXT_DELAY + 1000;
+    if (milestone) delay = Math.max(delay, 3000);  // 빵빠레 끝날 때까지 대기
+    setTimeout(() => {
+      $('mark').classList.remove('show');
+      newProblem();
+    }, delay);
+  }
+
+  // 입력 처리: 숫자만, 자동으로 다음 칸 이동
+  [d1, d2].forEach((box, i) => {
+    box.addEventListener('input', () => {
+      box.value = box.value.replace(/\D/g, '').slice(-1);
+      if (box.value && i === 0) d2.focus();
+    });
+    box.addEventListener('keydown', e => {
+      if (e.key === 'Enter') { e.preventDefault(); check(); }
+      if (e.key === 'Backspace' && i === 1 && box.value === '') { d1.focus(); }
+      if (e.key === 'ArrowLeft' && i === 1) d1.focus();
+      if (e.key === 'ArrowRight' && i === 0) d2.focus();
+    });
+  });
+  $('submitBtn').addEventListener('click', check);
+
+  // 브라우저는 사용자가 한 번 조작해야 소리를 허용하므로, 첫 입력 때 오디오를 미리 켜 둠
+  ['keydown', 'pointerdown'].forEach(ev =>
+    document.addEventListener(ev, getAudio, { once: true }));
+
+  newProblem();
+</script>
+</body>
+</html>
