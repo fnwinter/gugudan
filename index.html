@@ -78,9 +78,27 @@
     font-size: clamp(28px, 6vw, 40px);
     font-weight: 700;
   }
+
+  .fullscreen-btn {
+    position: fixed;
+    top: 16px;
+    right: 16px;
+    background: var(--box);
+    color: var(--ink);
+    border: 3px solid var(--ink);
+    border-radius: 16px;
+    padding: 8px 16px;
+    font: inherit;
+    font-size: 20px;
+    font-weight: 700;
+    cursor: pointer;
+    box-shadow: 0 4px 0 rgba(0, 0, 0, 0.12);
+  }
+  .fullscreen-btn:active { transform: translateY(2px); box-shadow: 0 2px 0 rgba(0, 0, 0, 0.12); }
 </style>
 </head>
 <body>
+  <button class="fullscreen-btn" id="fullscreenBtn" type="button">⛶ 전체 화면</button>
   <h1>무엇을 연습할까요?</h1>
   <div class="menu">
     <a class="card" href="gugudan.html">
@@ -120,5 +138,22 @@
       <div class="name">할 일 목록</div>
     </a>
   </div>
+<script>
+  const fullscreenBtn = document.getElementById("fullscreenBtn");
+
+  function updateFullscreenBtn() {
+    fullscreenBtn.textContent = document.fullscreenElement ? "↙ 전체 화면 끄기" : "⛶ 전체 화면";
+  }
+
+  fullscreenBtn.addEventListener("click", () => {
+    if (document.fullscreenElement) {
+      document.exitFullscreen();
+    } else {
+      document.documentElement.requestFullscreen().catch(() => {});
+    }
+  });
+
+  document.addEventListener("fullscreenchange", updateFullscreenBtn);
+</script>
 </body>
 </html>
