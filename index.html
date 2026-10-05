@@ -138,22 +138,6 @@
       <div class="name">할 일 목록</div>
     </a>
   </div>
-<script>
-  const fullscreenBtn = document.getElementById("fullscreenBtn");
-
-  function updateFullscreenBtn() {
-    fullscreenBtn.textContent = document.fullscreenElement ? "↙ 전체 화면 끄기" : "⛶ 전체 화면";
-  }
-
-  fullscreenBtn.addEventListener("click", () => {
-    if (document.fullscreenElement) {
-      document.exitFullscreen();
-    } else {
-      document.documentElement.requestFullscreen().catch(() => {});
-    }
-  });
-
-  document.addEventListener("fullscreenchange", updateFullscreenBtn);
-</script>
+<script src="fullscreen.js"></script>
 </body>
 </html>
